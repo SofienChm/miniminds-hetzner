@@ -1,0 +1,197 @@
+<div *ngIf="isParent" class="parent-detailchild font-inter">
+  <app-parent-child-header-simple *ngIf="isParent"
+        title="Message"
+      >
+  </app-parent-child-header-simple>
+
+  <div class="body container-fluid">
+    <div class="main-information">
+      <div class="row">
+        <div [class]="isParent ? 'col-12 mb-3' : 'col-md-4'">
+          <div class="panel messages-panel">
+            <div class="panel-header">
+              <div class="left-message-title">
+                <h4>Messages</h4>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="tabs">
+                <div class="tab" [class.active]="activeTab === 'received'" (click)="switchTab('received')">
+                  Received ({{ inbox.length }})
+                </div>
+                <div class="tab" [class.active]="activeTab === 'sent'" (click)="switchTab('sent')">
+                  Sent ({{ sent.length }})
+                </div>
+              </div>
+              
+              <div class="messages-list">
+                <div class="message-item" [class.unread]="!msg.isRead"
+                  *ngFor="let msg of activeMessages" (click)="selectMessage(msg)">
+                  <div class="message-subject">{{ msg.subject }}</div>
+                  <div class="message-content">{{ msg.content.substring(0, 100) }}{{ msg.content.length > 100 ? '...' : '' }}</div>
+                  <div class="message-meta">
+                    <span class="message-date">{{ msg.sentAt | date:'short' }}</span>
+                    <span class="message-sender">{{ activeTab === 'received' ? msg.senderName : 'To: ' + msg.recipientName }}</span>
+                  </div>
+                </div>
+                <div class="empty muted" *ngIf="activeMessages.length === 0">
+                  No messages found
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="float-btn" (click)="openNewMessageModal()">
+        <i class="bi bi-plus"></i>
+        New Message
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="!isParent" [class]="isParent ? '' : 'container-fluid mt-4'">
+  <app-title-page 
+  [title]="'Messages'" 
+  [breadcrumbs]="[{label: 'Dashboard', url: '/dashboard'}, {label: 'Messages'}]">
+  </app-title-page>
+  <div class="row">
+    <div [class]="isParent ? 'col-12 mb-3' : 'col-md-4'">
+      <div class="panel messages-panel">
+        <div class="panel-header">
+          <div class="left-message-title">
+            <h4>Messages</h4>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="tabs">
+            <div class="tab" [class.active]="activeTab === 'received'" (click)="switchTab('received')">
+              Received ({{ inbox.length }})
+            </div>
+            <div class="tab" [class.active]="activeTab === 'sent'" (click)="switchTab('sent')">
+              Sent ({{ sent.length }})
+            </div>
+          </div>
+          
+          <div class="messages-list">
+            <div class="message-item" [class.unread]="!msg.isRead"
+              *ngFor="let msg of activeMessages" (click)="selectMessage(msg)">
+              <div class="message-subject">{{ msg.subject }}</div>
+              <div class="message-content">{{ msg.content.substring(0, 100) }}{{ msg.content.length > 100 ? '...' : '' }}</div>
+              <div class="message-meta">
+                <span class="message-date">{{ msg.sentAt | date:'short' }}</span>
+                <span class="message-sender">{{ activeTab === 'received' ? msg.senderName : 'To: ' + msg.recipientName }}</span>
+              </div>
+            </div>
+            <div class="empty muted" *ngIf="activeMessages.length === 0">
+              No messages found
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div *ngIf="!isParent" class="col-md-8">
+      <div class="panel">
+        <div class="panel-header">
+          <div>New Message</div>
+        </div>
+        <div class="panel-body message-body">
+          <div>
+            <div class="input-row" *ngIf="isAdmin">
+              <select class="input" [(ngModel)]="composeForm.recipientType" required>
+                <option value="individual">Individual</option>
+                <option value="all">All Users</option>
+              </select>
+            </div>
+            <div class="input-row" style="margin-top: 12px;" *ngIf="composeForm.recipientType === 'individual'">
+              <select class="input" [(ngModel)]="composeForm.recipientId" required>
+                <option value="">Select recipient</option>
+                <optgroup label="Parents" *ngIf="isAdmin">
+                  <option *ngFor="let p of recipients.parents" [value]="p.id">
+                    {{ p.name }} ({{ p.email }})
+                  </option>
+                </optgroup>
+                <optgroup label="Teachers" *ngIf="isAdmin">
+                  <option *ngFor="let t of recipients.teachers" [value]="t.id">
+                    {{ t.name }} ({{ t.email }})
+                  </option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="input-row" style="margin-top: 12px;">
+              <input type="text" class="input" placeholder="Subject" [(ngModel)]="composeForm.subject" required>
+            </div>
+            <div class="input-row" style="margin-top: 12px;">
+              <textarea class="textarea" placeholder="Message content" [(ngModel)]="composeForm.content" required></textarea>
+            </div>
+            <div class="input-row" style="margin-top: 12px;">
+              <button class="send" (click)="sendMessage()" [disabled]="(composeForm.recipientType === 'individual' && !composeForm.recipientId) || !composeForm.subject.trim() || !composeForm.content.trim()">
+                <i class="bi bi-send"></i> Send Message
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showNewMessageModal" class="modal-backdrop" (click)="closeNewMessageModal()"></div>
+<div *ngIf="showNewMessageModal" class="modal">
+  <div class="modal-header">
+    <h3 class="modal-title">New Message</h3>
+    <button class="modal-close" (click)="closeNewMessageModal()">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="input-row">
+      <input type="text" class="input" placeholder="Subject" [(ngModel)]="composeForm.subject" required>
+    </div>
+    <div class="input-row" style="margin-top: 12px;">
+      <textarea class="textarea" placeholder="Message content" [(ngModel)]="composeForm.content" required></textarea>
+    </div>
+    <div class="input-row" style="margin-top: 12px;">
+      <button class="send" (click)="sendMessage()" [disabled]="!composeForm.subject.trim() || !composeForm.content.trim()">
+        <i class="bi bi-send"></i> Send Message
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showModal" class="modal-backdrop" (click)="closeModal()"></div>
+<div *ngIf="showModal" class="modal">
+  <div class="modal-header">
+    <h3 class="modal-title">Message Details</h3>
+    <button class="modal-close" (click)="closeModal()">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div *ngIf="selectedMessage">
+      <div class="message-header">
+        <h3 class="message-title">{{ selectedMessage.subject }}</h3>
+        <div class="message-sender">From: {{ selectedMessage.senderName }}</div>
+        <div class="message-recipient">To: {{ selectedMessage.recipientName }}</div>
+        <div class="message-date-full">Sent: {{ selectedMessage.sentAt | date:'medium' }}</div>
+      </div>
+      
+      <div class="message-content-full">
+        {{ selectedMessage.content }}
+      </div>
+      
+      <div class="response-section" *ngIf="selectedMessage.replies?.length > 0">
+        <div class="response-title">Replies</div>
+        <div *ngFor="let reply of selectedMessage.replies" class="reply-item">
+          <div class="reply-header">{{ reply.senderName }} - {{ reply.sentAt | date:'short' }}</div>
+          <div class="response-content">
+            {{ reply.content }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="input-row" style="margin-top: 12px;">
+        <button class="send" (click)="reply()">
+          <i class="bi bi-reply"></i> Reply
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,18 @@
+# .NET
+miniminds-api/bin/
+miniminds-api/obj/
+miniminds-api/appsettings.json
+miniminds-api/*.log
+
+# User uploads
+miniminds-api/wwwroot/uploads/
+
+# Angular
+miniminds-web/node_modules/
+miniminds-web/.angular/
+miniminds-web/dist/
+
+# Environment files
+miniminds-web/src/environments/environment.ts
+miniminds-web/src/environments/environment.development.ts
+miniminds-web/src/environments/environment.prod.ts
