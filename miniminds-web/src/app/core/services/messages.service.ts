@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { ApiConfig } from '../config/api.config';
 
 export interface MailMessage {
   id: number;
@@ -27,7 +28,7 @@ export interface Recipient {
 
 @Injectable({ providedIn: 'root' })
 export class MessagesService {
-  private apiUrl = `${environment.apiUrl}/api/Messages`;
+  private apiUrl = ApiConfig.ENDPOINTS.MESSAGES;
 
   constructor(private http: HttpClient) {}
 

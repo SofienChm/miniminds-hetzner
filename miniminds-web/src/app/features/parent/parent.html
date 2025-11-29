@@ -156,7 +156,7 @@
           <div class="d-flex align-items-center">
             <span class="text-muted">children :  </span>
             <img *ngIf="parent.children && parent.children.length > 0" 
-                 loading="lazy" [src]="parent.children[0].profilePicture || 'https://via.placeholder.com/30'" 
+                 loading="lazy" [src]="parent.children[0].profilePicture || 'assets/child.png'" 
                  class="rounded-circle me-2" 
                  width="30" 
                  height="30" 
@@ -190,7 +190,7 @@
           <tbody>
             <tr *ngFor="let parent of displayedParents" (click)="viewDetails(parent)" style="cursor: pointer;">
               <td>
-                <img loading="lazy" [src]="parent.profilePicture || 'https://via.placeholder.com/40'" 
+                <img loading="lazy" [src]="parent.profilePicture || (parent.gender?.toLowerCase() === 'female' ? 'assets/mother.png' : 'assets/father.png')" 
                      class="rounded-circle" width="40" height="40" alt="Parent">
               </td>
               <td>

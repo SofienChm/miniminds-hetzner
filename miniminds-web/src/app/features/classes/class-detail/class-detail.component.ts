@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { ApiConfig } from '../../../core/config/api.config';
 import { ClassesService } from '../classes.service';
 import { ClassModel } from '../classes.interface';
 import { TitlePage, TitleAction, Breadcrumb } from '../../../shared/layouts/title-page/title-page';
@@ -85,14 +86,14 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadAssignedTeachers() {
-    this.http.get<any[]>(`http://localhost:5001/api/classes/${this.classId}/teachers`).subscribe({
+    this.http.get<any[]>(`${ApiConfig.ENDPOINTS.CLASSES}/${this.classId}/teachers`).subscribe({
       next: (teachers) => this.assignedTeachers = teachers,
       error: (error) => console.error('Error loading assigned teachers:', error)
     });
   }
 
   loadEnrolledChildren() {
-    this.http.get<any[]>(`http://localhost:5001/api/classes/${this.classId}/children`).subscribe({
+    this.http.get<any[]>(`${ApiConfig.ENDPOINTS.CLASSES}/${this.classId}/children`).subscribe({
       next: (children) => this.enrolledChildren = children,
       error: (error) => console.error('Error loading enrolled children:', error)
     });
@@ -109,7 +110,7 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadAvailableChildren() {
-    this.http.get<any[]>('http://localhost:5001/api/children').subscribe({
+    this.http.get<any[]>(ApiConfig.ENDPOINTS.CHILDREN).subscribe({
       next: (children) => {
         const enrolledIds = this.enrolledChildren.map(c => c.id);
         this.availableChildren = children.filter(c => !enrolledIds.includes(c.id));
@@ -122,7 +123,7 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.selectedChildId) return;
 
     const payload = { classId: this.classId, childId: this.selectedChildId };
-    this.http.post('http://localhost:5001/api/classes/enroll', payload).subscribe({
+    this.http.post(`${ApiConfig.ENDPOINTS.CLASSES}/enroll`, payload).subscribe({
       next: () => {
         this.closeAddChildModal();
         this.loadClass();
@@ -176,7 +177,7 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadAvailableTeachers() {
-    this.http.get<any[]>('http://localhost:5001/api/teachers').subscribe({
+    this.http.get<any[]>(ApiConfig.ENDPOINTS.EDUCATORS).subscribe({
       next: (teachers) => {
         const assignedIds = this.assignedTeachers.map(t => t.id);
         this.availableTeachers = teachers.filter(t => !assignedIds.includes(t.id));
@@ -195,7 +196,7 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.selectedTeacherIds.length === 0) return;
 
     const payload = { classId: this.classId, teacherIds: this.selectedTeacherIds };
-    this.http.post('http://localhost:5001/api/classes/assign-teachers', payload).subscribe({
+    this.http.post(`${ApiConfig.ENDPOINTS.CLASSES}/assign-teachers`, payload).subscribe({
       next: () => {
         this.closeAssignTeacherModal();
         this.loadClass();
@@ -229,7 +230,7 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       confirmButtonText: 'Yes, remove!'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.http.delete(`http://localhost:5001/api/classes/${this.classId}/teachers/${teacherId}`).subscribe({
+        this.http.delete(`${ApiConfig.ENDPOINTS.CLASSES}/${this.classId}/teachers/${teacherId}`).subscribe({
           next: () => {
             this.loadClass();
             Swal.fire({
@@ -264,7 +265,7 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       confirmButtonText: 'Yes, remove!'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.http.delete(`http://localhost:5001/api/classes/${this.classId}/children/${childId}`).subscribe({
+        this.http.delete(`${ApiConfig.ENDPOINTS.CLASSES}/${this.classId}/children/${childId}`).subscribe({
           next: () => {
             this.loadClass();
             Swal.fire({

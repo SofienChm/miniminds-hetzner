@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth';
 import { AuthResponse } from '../../core/interfaces/dto/auth-response-dto';
 import { Breadcrumb } from '../../shared/layouts/title-page/title-page';
-import { environment } from '../../../environments/environment.development';
+import { ApiConfig } from '../../core/config/api.config';
 
 interface ProfileUpdateRequest {
   firstName: string;
@@ -72,7 +72,7 @@ export class Profile implements OnInit {
       const formData = new FormData();
       formData.append('file', file);
 
-      this.http.post(`${environment.apiUrl}/api/profile/upload-picture`, formData)
+      this.http.post(`${ApiConfig.BASE_URL}/profile/upload-picture`, formData)
         .subscribe({
           next: (response: any) => {
             if (response.profilePicture) {
@@ -96,7 +96,7 @@ export class Profile implements OnInit {
     this.saving = true;
     this.errorMessage = '';
 
-    this.http.put(`${environment.apiUrl}/api/profile`, this.profile)
+    this.http.put(`${ApiConfig.BASE_URL}/profile`, this.profile)
       .subscribe({
         next: (response: any) => {
           // Update local user data

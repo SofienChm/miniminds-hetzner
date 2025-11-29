@@ -19,6 +19,9 @@ export class ApiConfig {
     NOTIFICATIONS: `${ApiConfig.BASE_URL}/notifications`,
     MESSAGES: `${ApiConfig.BASE_URL}/messages`,
     CLASSES: `${ApiConfig.BASE_URL}/classes`,
-    SETTINGS: `${ApiConfig.BASE_URL}/settings`
+    SETTINGS: `${ApiConfig.BASE_URL}/settings`,
+    PAYMENT: `${ApiConfig.BASE_URL}/Payment`,
+    RECLAMATION: `${ApiConfig.BASE_URL}/Reclamations`
+
   };
 }

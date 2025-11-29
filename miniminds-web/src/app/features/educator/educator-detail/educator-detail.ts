@@ -9,6 +9,7 @@ import { ChildModel } from '../../children/children.interface';
 import { AuthService } from '../../../core/services/auth';
 import { TitlePage, TitleAction, Breadcrumb } from '../../../shared/layouts/title-page/title-page';
 import { HttpClient } from '@angular/common/http';
+import { ApiConfig } from '../../../core/config/api.config';
 
 @Component({
   selector: 'app-educator-detail',
@@ -86,7 +87,7 @@ export class EducatorDetail implements OnInit {
   }
 
   loadAssignedChildren() {
-    this.http.get<ChildModel[]>(`http://localhost:5001/api/teachers/${this.educatorId}/children`).subscribe({
+    this.http.get<ChildModel[]>(`${ApiConfig.ENDPOINTS.EDUCATORS}/${this.educatorId}/children`).subscribe({
       next: (children) => this.assignedChildren = children,
       error: (error) => console.error('Error loading assigned children:', error)
     });
@@ -130,7 +131,7 @@ export class EducatorDetail implements OnInit {
   assignChildToEducator() {
     if (!this.selectedChildId) return;
 
-    this.http.post(`http://localhost:5001/api/teachers/${this.educatorId}/assign-child`, {
+    this.http.post(`${ApiConfig.ENDPOINTS.EDUCATORS}/${this.educatorId}/assign-child`, {
       childId: this.selectedChildId
     }).subscribe({
       next: () => {
@@ -144,7 +145,7 @@ export class EducatorDetail implements OnInit {
   removeChild(childId: number) {
     if (!confirm('Remove this child from the educator?')) return;
 
-    this.http.delete(`http://localhost:5001/api/teachers/${this.educatorId}/remove-child/${childId}`).subscribe({
+    this.http.delete(`${ApiConfig.ENDPOINTS.EDUCATORS}/${this.educatorId}/remove-child/${childId}`).subscribe({
       next: () => this.loadAssignedChildren(),
       error: (error) => console.error('Error removing child:', error)
     });

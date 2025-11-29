@@ -10,6 +10,7 @@ import { ChildModel } from '../children/children.interface';
 import Swal from 'sweetalert2';
 import { Location } from '@angular/common';
 import { AuthService } from '../../core/services/auth';
+import { PermissionService } from '../../core/services/permission.service';
 import { ParentChildHeaderSimpleComponent } from '../../shared/components/parent-child-header-simple/parent-child-header-simple.component';
 
 @Component({
@@ -88,7 +89,8 @@ export class FeeComponent implements OnInit {
     private feeService: FeeService,
     private childrenService: ChildrenService,
     private location: Location,
-    private authService: AuthService
+    private authService: AuthService,
+    private permissionService: PermissionService
   ) {}
 
   ngOnInit() {    
@@ -332,5 +334,13 @@ export class FeeComponent implements OnInit {
   }
   get isParent(): boolean {
     return this.authService.getUserRole() === 'Parent';
+  }
+
+  canEdit(): boolean {
+    return this.permissionService.canEdit();
+  }
+
+  canView(): boolean {
+    return this.permissionService.canView();
   }
 }
