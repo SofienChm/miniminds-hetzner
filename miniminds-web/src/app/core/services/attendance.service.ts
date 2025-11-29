@@ -8,7 +8,7 @@ import { ApiConfig } from '../config/api.config';
   providedIn: 'root'
 })
 export class AttendanceService {
-  private apiUrl = `${ApiConfig.BASE_URL}/attendance`;
+  private apiUrl = ApiConfig.ENDPOINTS.ATTENDANCE;
 
   constructor(private http: HttpClient) {}
 

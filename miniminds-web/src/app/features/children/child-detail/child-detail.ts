@@ -10,6 +10,7 @@ import { AuthService } from '../../../core/services/auth';
 import { TitlePage, TitleAction, Breadcrumb } from '../../../shared/layouts/title-page/title-page';
 import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
+import { ApiConfig } from '../../../core/config/api.config';
 
 @Component({
   selector: 'app-child-detail',
@@ -140,7 +141,7 @@ export class ChildDetail implements OnInit {
       isPrimaryContact: this.isPrimaryContact
     };
 
-    this.http.post('http://localhost:5001/api/children/add-parent', payload).subscribe({
+    this.http.post(`${ApiConfig.ENDPOINTS.CHILDREN}/add-parent`, payload).subscribe({
       next: () => {
         this.closeAddParentModal();
         this.loadChild();
@@ -175,7 +176,7 @@ export class ChildDetail implements OnInit {
       cancelButtonText: 'Cancel'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.http.delete(`http://localhost:5001/api/children/remove-parent/${childParentId}`).subscribe({
+        this.http.delete(`${ApiConfig.ENDPOINTS.CHILDREN}/remove-parent/${childParentId}`).subscribe({
           next: () => {
             this.loadChild();
             Swal.fire({

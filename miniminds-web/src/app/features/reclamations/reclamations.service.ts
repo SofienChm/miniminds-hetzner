@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { ApiConfig } from '../../core/config/api.config';
 
 export interface Reclamation {
   id?: number;
@@ -26,7 +27,7 @@ export interface ReclamationUser {
 
 @Injectable({ providedIn: 'root' })
 export class ReclamationsService {
-  private apiUrl = `${environment.apiUrl}/api/Reclamations`;
+  private apiUrl = ApiConfig.ENDPOINTS.RECLAMATION;
 
   constructor(private http: HttpClient) {}
 

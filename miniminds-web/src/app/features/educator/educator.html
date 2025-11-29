@@ -182,7 +182,7 @@
           <tbody>
             <tr *ngFor="let educator of displayedEducators" (click)="viewDetails(educator)" style="cursor: pointer;">
               <td>
-                <img loading="lazy" [src]="educator.profilePicture || 'https://via.placeholder.com/40'" 
+                <img loading="lazy" [src]="educator.profilePicture || 'assets/default-avatar.svg'" 
                      class="rounded-circle" width="40" height="40" alt="Educator">
               </td>
               <td>

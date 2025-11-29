@@ -8,8 +8,8 @@ import { TitlePage, Breadcrumb } from '../../shared/layouts/title-page/title-pag
 import { PrefixService } from '../../core/services/prefix/prefix.service';
 import { AuthService } from '../../core/services/auth';
 import { LanguageService } from '../../core/services/langauge-service';
+import { ApiConfig } from '../../core/config/api.config';
 import Swal from 'sweetalert2';
-import { environment } from '../../../environments/environment.development';
 
 @Component({
   selector: 'app-settings',
@@ -68,19 +68,19 @@ export class SettingsComponent implements OnInit {
   }
 
   loadLeaveSettings(): void {
-    this.http.get<any>(`${environment.apiUrl}/api/settings/DefaultAnnualLeaveDays`).subscribe({
+    this.http.get<any>(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultAnnualLeaveDays`).subscribe({
       next: (setting) => this.defaultAnnualLeaveDays = parseInt(setting.value),
       error: () => this.defaultAnnualLeaveDays = 30
     });
-    this.http.get<any>(`${environment.apiUrl}/api/settings/DefaultMedicalLeaveDays`).subscribe({
+    this.http.get<any>(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultMedicalLeaveDays`).subscribe({
       next: (setting) => this.defaultMedicalLeaveDays = parseInt(setting.value),
       error: () => this.defaultMedicalLeaveDays = 10
     });
   }
 
   saveLeaveSettings(): void {
-    this.http.put(`${environment.apiUrl}/api/settings/DefaultAnnualLeaveDays`, { value: this.defaultAnnualLeaveDays.toString() }).subscribe();
-    this.http.put(`${environment.apiUrl}/api/settings/DefaultMedicalLeaveDays`, { value: this.defaultMedicalLeaveDays.toString() }).subscribe({
+    this.http.put(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultAnnualLeaveDays`, { value: this.defaultAnnualLeaveDays.toString() }).subscribe();
+    this.http.put(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultMedicalLeaveDays`, { value: this.defaultMedicalLeaveDays.toString() }).subscribe({
       next: () => {
         Swal.fire({
           icon: 'success',

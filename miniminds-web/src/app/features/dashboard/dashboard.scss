@@ -622,7 +622,7 @@
   }
   
   .child-name {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     color: #1F2937;
     margin: 0 0 4px;
@@ -631,7 +631,8 @@
   .child-age {
     font-size: 14px;
     color: #6B7280;
-    margin: 0 0 4px;
+    line-height: 1.45;
+    margin: 0px;
   }
   
   .check-in-time {
@@ -642,9 +643,7 @@
 }
 
 .today-stats {
-  padding: 0 20px;
   margin-bottom: 24px;
-  
   .section-title {
     font-size: 20px;
     font-weight: 600;
@@ -775,7 +774,6 @@
 }
 
 .activities-section {
-  padding: 0 20px;
   margin-bottom: 24px;
   
   .section-title {
@@ -877,7 +875,6 @@
 }
 
 .upcoming-events {
-  padding: 0 20px;
   margin-bottom: 24px;
   
   .section-title {
