@@ -1,21 +1,26 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { EducatorModel } from './educator.interface';
 import { EducatorService } from './educator.service';
-import { TitlePage, TitleAction, Breadcrumb, DropdownItem } from '../../shared/layouts/title-page/title-page';
+import { TitlePage, TitleAction, Breadcrumb } from '../../shared/layouts/title-page/title-page';
 import { ExportUtil } from '../../shared/utils/export.util';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-educator',
   standalone: true,
-  imports: [CommonModule, FormsModule, TitlePage],
+  imports: [CommonModule, FormsModule, TitlePage, NgSelectModule, TranslateModule],
   templateUrl: './educator.html',
   styleUrl: './educator.scss'
 })
-export class Educator implements OnInit {
+export class Educator implements OnInit, OnDestroy {
+  private educatorsSub?: Subscription;
+  private langChangeSub?: Subscription;
   educators: EducatorModel[] = [];
   filteredEducators: EducatorModel[] = [];
   displayedEducators: EducatorModel[] = [];
@@ -28,49 +33,81 @@ export class Educator implements OnInit {
   currentPage = 1;
   searchTerm: string = '';
 
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Educators' }
-  ];
-
-  titleActions: TitleAction[] = [
-    {
-      label: 'Export',
-      class: 'btn btn-light me-2',
-      action: () => {},
-      dropdown: {
-        items: [
-          {
-            label: 'Export as PDF',
-            icon: 'bi bi-file-earmark-pdf',
-            action: () => this.exportToPDF()
-          },
-          {
-            label: 'Export as Excel',
-            icon: 'bi bi-file-earmark-excel',
-            action: () => this.exportToExcel()
-          }
-        ]
-      }
-    },
-    {
-      label: 'Add Educator',
-      class: 'btn btn-primary',
-      action: () => this.router.navigate(['/educators/add'])
-    }
-  ];
+  breadcrumbs: Breadcrumb[] = [];
+  sortOptions: { value: string; label: string; icon: string }[] = [];
+  titleActions: TitleAction[] = [];
 
   constructor(
     private educatorService: EducatorService,
-    private router: Router
+    private router: Router,
+    private translate: TranslateService
   ) {}
 
   ngOnInit() {
+    this.initBreadcrumbs();
+    this.initSortOptions();
+    this.initTitleActions();
     this.loadEducators();
-    this.educatorService.educators$.subscribe(educators => {
+    this.educatorsSub = this.educatorService.educators$.subscribe(educators => {
       this.educators = educators;
       this.filteredEducators = educators;
     });
+
+    // Update translations when language changes
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.initBreadcrumbs();
+      this.initSortOptions();
+      this.initTitleActions();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.educatorsSub?.unsubscribe();
+    this.langChangeSub?.unsubscribe();
+  }
+
+  private initBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.DASHBOARD') },
+      { label: this.translate.instant('BREADCRUMBS.EDUCATORS') }
+    ];
+  }
+
+  private initSortOptions(): void {
+    this.sortOptions = [
+      { value: 'name-asc', label: this.translate.instant('EDUCATORS.SORT_AZ'), icon: 'bi-sort-alpha-down' },
+      { value: 'name-desc', label: this.translate.instant('EDUCATORS.SORT_ZA'), icon: 'bi-sort-alpha-up' },
+      { value: 'recent-hired', label: this.translate.instant('EDUCATORS.RECENTLY_HIRED'), icon: 'bi-calendar-check' }
+    ];
+  }
+
+  private initTitleActions(): void {
+    this.titleActions = [
+      {
+        label: this.translate.instant('EDUCATORS.EXPORT'),
+        class: 'btn btn-light me-2',
+        action: () => {},
+        dropdown: {
+          items: [
+            {
+              label: this.translate.instant('EDUCATORS.EXPORT_PDF'),
+              icon: 'bi bi-file-earmark-pdf',
+              action: () => this.exportToPDF()
+            },
+            {
+              label: this.translate.instant('EDUCATORS.EXPORT_EXCEL'),
+              icon: 'bi bi-file-earmark-excel',
+              action: () => this.exportToExcel()
+            }
+          ]
+        }
+      },
+      {
+        label: this.translate.instant('EDUCATORS.ADD_EDUCATOR'),
+        class: 'btn-add-global-2',
+        action: () => this.router.navigate(['/educators/add'])
+      }
+    ];
   }
 
   loadEducators() {
@@ -84,8 +121,8 @@ export class Educator implements OnInit {
       error: (error) => {
         console.error('Error loading educators:', error);
         this.loading = false;
-        const errorMessage = error?.error?.message || 'Failed to load educators. Please check if the backend server is running.';
-        Swal.fire('Error', errorMessage, 'error');
+        const errorMessage = error?.error?.message || this.translate.instant('EDUCATORS.LOAD_ERROR');
+        Swal.fire(this.translate.instant('MESSAGES.ERROR'), errorMessage, 'error');
       }
     });
   }
@@ -107,23 +144,28 @@ export class Educator implements OnInit {
 
   deleteEducator(id: number) {
     Swal.fire({
-      title: 'Are you sure?',
-      text: 'Do you want to delete this educator?',
+      title: this.translate.instant('EDUCATORS.DELETE_CONFIRM_TITLE'),
+      text: this.translate.instant('EDUCATORS.DELETE_CONFIRM_TEXT'),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonText: this.translate.instant('EDUCATORS.YES_DELETE'),
+      cancelButtonText: this.translate.instant('COMMON.CANCEL')
     }).then((result) => {
       if (result.isConfirmed) {
         this.educatorService.deleteEducator(id).subscribe({
           next: () => {
-            Swal.fire('Deleted!', 'Educator has been deleted.', 'success');
+            Swal.fire(
+              this.translate.instant('EDUCATORS.DELETE_SUCCESS_TITLE'),
+              this.translate.instant('EDUCATORS.DELETE_SUCCESS_TEXT'),
+              'success'
+            );
             this.loadEducators();
           },
           error: (error) => {
-            const errorMessage = error?.error?.message || 'Failed to delete educator';
-            Swal.fire('Error', errorMessage, 'error');
+            const errorMessage = error?.error?.message || this.translate.instant('EDUCATORS.DELETE_ERROR');
+            Swal.fire(this.translate.instant('MESSAGES.ERROR'), errorMessage, 'error');
           }
         });
       }
@@ -144,13 +186,17 @@ export class Educator implements OnInit {
     this.applySort();
   }
 
+  onSortChange() {
+    this.applySort();
+  }
+
   toggleSortMenu() {
     this.showSortMenu = !this.showSortMenu;
   }
 
   applySort() {
     let sorted = [...this.educators];
-    
+
     switch (this.sortBy) {
       case 'name-asc':
         sorted.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
@@ -162,7 +208,7 @@ export class Educator implements OnInit {
         sorted.sort((a, b) => new Date(b.hireDate).getTime() - new Date(a.hireDate).getTime());
         break;
     }
-    
+
     this.filteredEducators = sorted;
     this.currentPage = 1;
     this.updateDisplayedEducators();
@@ -184,10 +230,10 @@ export class Educator implements OnInit {
 
   getSortLabel(): string {
     switch (this.sortBy) {
-      case 'name-asc': return 'Sort by A-Z';
-      case 'name-desc': return 'Sort by Z-A';
-      case 'recent-hired': return 'Recently Hired';
-      default: return 'Sort by A-Z';
+      case 'name-asc': return this.translate.instant('EDUCATORS.SORT_AZ');
+      case 'name-desc': return this.translate.instant('EDUCATORS.SORT_ZA');
+      case 'recent-hired': return this.translate.instant('EDUCATORS.RECENTLY_HIRED');
+      default: return this.translate.instant('EDUCATORS.SORT_AZ');
     }
   }
 
@@ -197,37 +243,42 @@ export class Educator implements OnInit {
 
   exportToPDF(): void {
     const data = this.filteredEducators.map(educator => ({
-      'Name': `${educator.firstName} ${educator.lastName}`,
-      'Email': educator.email,
-      'Phone': educator.phone || 'N/A',
-      'Specialization': educator.specialization || 'N/A',
-      'Hire Date': new Date(educator.hireDate).toLocaleDateString(),
-      'Status': educator.isActive ? 'Active' : 'Inactive'
+      [this.translate.instant('EDUCATORS.NAME')]: `${educator.firstName} ${educator.lastName}`,
+      [this.translate.instant('EDUCATORS.EMAIL')]: educator.email,
+      [this.translate.instant('EDUCATORS.PHONE')]: educator.phone || this.translate.instant('COMMON.NA'),
+      [this.translate.instant('EDUCATORS.SPECIALIZATION')]: educator.specialization || this.translate.instant('COMMON.NA'),
+      [this.translate.instant('EDUCATORS.HIRE_DATE')]: new Date(educator.hireDate).toLocaleDateString(),
+      [this.translate.instant('EDUCATORS.STATUS')]: educator.isActive ? this.translate.instant('EDUCATORS.ACTIVE') : this.translate.instant('EDUCATORS.INACTIVE')
     }));
 
     if (data.length === 0) {
-      Swal.fire('Warning', 'No data to export', 'warning');
+      Swal.fire(this.translate.instant('MESSAGES.WARNING'), this.translate.instant('EDUCATORS.NO_DATA_EXPORT'), 'warning');
       return;
     }
 
-    ExportUtil.exportToPDF(data, 'Educators Report');
+    ExportUtil.exportToPDF(data, this.translate.instant('EDUCATORS.REPORT_TITLE'));
   }
 
   exportToExcel(): void {
     const data = this.filteredEducators.map(educator => ({
-      'Name': `${educator.firstName} ${educator.lastName}`,
-      'Email': educator.email,
-      'Phone': educator.phone || 'N/A',
-      'Specialization': educator.specialization || 'N/A',
-      'Hire Date': new Date(educator.hireDate).toLocaleDateString(),
-      'Status': educator.isActive ? 'Active' : 'Inactive'
+      [this.translate.instant('EDUCATORS.NAME')]: `${educator.firstName} ${educator.lastName}`,
+      [this.translate.instant('EDUCATORS.EMAIL')]: educator.email,
+      [this.translate.instant('EDUCATORS.PHONE')]: educator.phone || this.translate.instant('COMMON.NA'),
+      [this.translate.instant('EDUCATORS.SPECIALIZATION')]: educator.specialization || this.translate.instant('COMMON.NA'),
+      [this.translate.instant('EDUCATORS.HIRE_DATE')]: new Date(educator.hireDate).toLocaleDateString(),
+      [this.translate.instant('EDUCATORS.STATUS')]: educator.isActive ? this.translate.instant('EDUCATORS.ACTIVE') : this.translate.instant('EDUCATORS.INACTIVE')
     }));
 
     if (data.length === 0) {
-      Swal.fire('Warning', 'No data to export', 'warning');
+      Swal.fire(this.translate.instant('MESSAGES.WARNING'), this.translate.instant('EDUCATORS.NO_DATA_EXPORT'), 'warning');
       return;
     }
 
-    ExportUtil.exportToExcel(data, 'Educators Report');
+    ExportUtil.exportToExcel(data, this.translate.instant('EDUCATORS.REPORT_TITLE'));
+  }
+
+  // TrackBy function for ngFor performance optimization
+  trackById(index: number, item: EducatorModel): number | undefined {
+    return item.id;
   }
 }

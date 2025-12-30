@@ -14,6 +14,18 @@ export interface FeeModel {
   paymentNotes?: string;
   daysOverdue?: number;
   createdAt?: string;
+  child?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    parent?: {
+      id?: number;
+      firstName: string;
+      lastName: string;
+      email?: string;
+    };
+  };
 }
 
 export interface CreateFeeModel {

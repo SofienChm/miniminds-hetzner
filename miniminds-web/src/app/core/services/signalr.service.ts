@@ -65,4 +65,12 @@ export class SignalRService {
     }
     this.isConnecting = false;
   }
+
+  onAttendanceUpdate(callback: () => void): void {
+    this.hubConnection?.on('AttendanceUpdated', callback);
+  }
+
+  offAttendanceUpdate(): void {
+    this.hubConnection?.off('AttendanceUpdated');
+  }
 }

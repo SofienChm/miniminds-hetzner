@@ -67,3 +67,17 @@
     color: #fff;
   }
 }
+.payment{
+  margin-top: 60px;
+}
+.total{
+  margin-bottom: 30px;
+}
+
+.text-end{
+  display: flex;
+  justify-content: end;
+}
+.badge.bg-primary{
+  background-color :var(--secondary-color) !important;
+}

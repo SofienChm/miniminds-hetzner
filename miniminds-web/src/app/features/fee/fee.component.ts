@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TitlePage, TitleAction, Breadcrumb } from '../../shared/layouts/title-page/title-page';
 import { FeeService } from './fee.service';
 import { ChildrenService } from '../children/children.service';
@@ -12,14 +14,19 @@ import { Location } from '@angular/common';
 import { AuthService } from '../../core/services/auth';
 import { PermissionService } from '../../core/services/permission.service';
 import { ParentChildHeaderSimpleComponent } from '../../shared/components/parent-child-header-simple/parent-child-header-simple.component';
+import { AppCurrencyPipe } from '../../core/services/currency/currency.pipe';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-fee',
-  imports: [CommonModule, TitlePage, FormsModule, ParentChildHeaderSimpleComponent],
+  imports: [CommonModule, TitlePage, FormsModule, NgSelectModule, ParentChildHeaderSimpleComponent, AppCurrencyPipe, TranslateModule],
   templateUrl: './fee.component.html',
   styleUrls: ['./fee.component.scss']
 })
-export class FeeComponent implements OnInit {
+export class FeeComponent implements OnInit, AfterViewInit, OnDestroy {
+  private tooltipInstances: any[] = [];
+  private langChangeSub?: Subscription;
   fees: FeeModel[] = [];
   displayedFees: FeeModel[] = [];
   children: ChildModel[] = [];
@@ -37,6 +44,10 @@ export class FeeComponent implements OnInit {
   filterStatus = 'all';
   filterChild = 'all';
   searchTerm = '';
+
+  statusOptions: Array<{ value: string; label: string; icon: string }> = [];
+
+  childOptions: { value: string; label: string; icon: string }[] = [];
 
   // New fee form
   newFee: CreateFeeModel = {
@@ -60,29 +71,9 @@ export class FeeComponent implements OnInit {
     paymentNotes: ''
   };
 
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Fees' }
-  ];
+  breadcrumbs: Breadcrumb[] = [];
 
-  titleActions: TitleAction[] = [
-    {
-      label: 'Update Overdue',
-      class: 'btn btn-warning me-2 btn-update-overdue',
-      action: () => this.updateOverdueFees()
-    },
-    {
-      label: 'Bulk Monthly Fee',
-      class: 'btn btn-info me-2 btn-bulk-monthly-fee',
-      action: () => this.openBulkFeeModal()
-    },
-    {
-      label: 'Add Fee',
-      class: 'btn btn-primary btn-add-fee',
-      action: () => this.navigateToAddFee()
-    }
-  ];
-
+  titleActions: TitleAction[] = [];
 
   constructor(
     private router: Router,
@@ -90,11 +81,88 @@ export class FeeComponent implements OnInit {
     private childrenService: ChildrenService,
     private location: Location,
     private authService: AuthService,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private translateService: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
-  ngOnInit() {    
+  ngOnInit() {
+    this.pageTitleService.setTitle(this.translateService.instant('FEES_PAGE.TITLE'));
+    this.updateTranslatedContent();
     this.loadData();
+
+    this.langChangeSub = this.translateService.onLangChange.subscribe(() => {
+      this.updateTranslatedContent();
+      this.pageTitleService.setTitle(this.translateService.instant('FEES_PAGE.TITLE'));
+      this.updateChildOptions();
+    });
+  }
+
+  ngAfterViewInit() {
+    this.initTooltips();
+  }
+
+  ngOnDestroy() {
+    this.disposeTooltips();
+    this.langChangeSub?.unsubscribe();
+  }
+
+  updateTranslatedContent(): void {
+    this.breadcrumbs = [
+      { label: this.translateService.instant('FEES_PAGE.DASHBOARD') },
+      { label: this.translateService.instant('FEES_PAGE.FEES_LABEL') }
+    ];
+
+    this.titleActions = [
+      {
+        label: this.translateService.instant('FEES_PAGE.UPDATE_OVERDUE'),
+        class: 'custom-btn-2 btn-view-global-2',
+        action: () => this.updateOverdueFees()
+      },
+      {
+        label: this.translateService.instant('FEES_PAGE.BULK_MONTHLY_FEE'),
+        class: 'custom-btn-2 btn-edit-global-2',
+        action: () => this.openBulkFeeModal()
+      },
+      {
+        label: this.translateService.instant('FEES_PAGE.ADD_FEE'),
+        class: 'custom-btn-2 btn-add-global-2',
+        action: () => this.navigateToAddFee()
+      }
+    ];
+
+    this.statusOptions = [
+      { value: 'all', label: this.translateService.instant('FEES_PAGE.ALL_STATUS'), icon: 'bi-list-ul' },
+      { value: 'pending', label: this.translateService.instant('FEES_PAGE.PENDING'), icon: 'bi-hourglass-split' },
+      { value: 'paid', label: this.translateService.instant('FEES_PAGE.PAID'), icon: 'bi-check-circle' },
+      { value: 'overdue', label: this.translateService.instant('FEES_PAGE.OVERDUE'), icon: 'bi-exclamation-triangle' }
+    ];
+  }
+
+  updateChildOptions(): void {
+    this.childOptions = [
+      { value: 'all', label: this.translateService.instant('FEES_PAGE.ALL_CHILDREN'), icon: 'bi-people' },
+      ...this.children.map(child => ({
+        value: child.id!.toString(),
+        label: `${child.firstName} ${child.lastName}`,
+        icon: 'bi-person'
+      }))
+    ];
+  }
+
+  initTooltips() {
+    setTimeout(() => {
+      this.disposeTooltips();
+      const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      this.tooltipInstances = tooltipTriggerList.map(el => new (window as any).bootstrap.Tooltip(el, {
+        trigger: 'hover'
+      }));
+    }, 100);
+  }
+
+  disposeTooltips() {
+    this.tooltipInstances.forEach(tooltip => tooltip?.dispose());
+    this.tooltipInstances = [];
   }
   back() {
     this.location.back();
@@ -108,6 +176,7 @@ export class FeeComponent implements OnInit {
       this.loadSummary()
     ]).finally(() => {
       this.loading = false;
+      this.initTooltips();
     });
   }
 
@@ -123,9 +192,11 @@ export class FeeComponent implements OnInit {
   loadChildren() {
     return this.childrenService.loadChildren().toPromise().then((children: ChildModel[] | undefined) => {
       this.children = children || [];
+      this.updateChildOptions();
     }).catch((error: any) => {
       console.error('Error loading children:', error);
       this.children = [];
+      this.childOptions = [{ value: 'all', label: this.translateService.instant('FEES_PAGE.ALL_CHILDREN'), icon: 'bi-people' }];
     });
   }
 
@@ -236,10 +307,19 @@ export class FeeComponent implements OnInit {
         next: (result) => {
           this.showBulkFeeModal = false;
           this.loadData();
-          alert(`Created ${result.count} monthly fees successfully!`);
+          Swal.fire(
+            this.translateService.instant('FEES_PAGE.SUCCESS'),
+            this.translateService.instant('FEES_PAGE.BULK_FEES_CREATED', { count: result.count }),
+            'success'
+          );
         },
         error: (error) => {
           console.error('Error creating bulk fees:', error);
+          Swal.fire(
+            this.translateService.instant('FEES_PAGE.ERROR'),
+            this.translateService.instant('FEES_PAGE.BULK_FEES_ERROR'),
+            'error'
+          );
         }
       });
     }
@@ -265,23 +345,32 @@ export class FeeComponent implements OnInit {
 
   updateOverdueFees() {
     Swal.fire({
-      title: 'Update Overdue Fees?',
-      text: 'This will mark all pending fees past their due date as overdue.',
+      title: this.translateService.instant('FEES_PAGE.UPDATE_OVERDUE_TITLE'),
+      text: this.translateService.instant('FEES_PAGE.UPDATE_OVERDUE_TEXT'),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, update them!'
+      confirmButtonText: this.translateService.instant('FEES_PAGE.YES_UPDATE'),
+      cancelButtonText: this.translateService.instant('FEES_PAGE.CANCEL')
     }).then((result) => {
       if (result.isConfirmed) {
         this.feeService.updateOverdueFees().subscribe({
           next: (result) => {
             this.loadData();
-            Swal.fire('Updated!', `${result.count} fees marked as overdue`, 'success');
+            Swal.fire(
+              this.translateService.instant('FEES_PAGE.UPDATED'),
+              this.translateService.instant('FEES_PAGE.FEES_MARKED_OVERDUE', { count: result.count }),
+              'success'
+            );
           },
           error: (error) => {
             console.error('Error updating overdue fees:', error);
-            Swal.fire('Error!', 'Failed to update overdue fees', 'error');
+            Swal.fire(
+              this.translateService.instant('FEES_PAGE.ERROR'),
+              this.translateService.instant('FEES_PAGE.UPDATE_OVERDUE_ERROR'),
+              'error'
+            );
           }
         });
       }
@@ -289,23 +378,44 @@ export class FeeComponent implements OnInit {
   }
 
   deleteFee(fee: FeeModel) {
-    if (confirm(`Are you sure you want to delete this fee for ${fee.childName}?`)) {
-      this.feeService.deleteFee(fee.id!).subscribe({
-        next: () => {
-          this.loadData();
-        },
-        error: (error) => {
-          console.error('Error deleting fee:', error);
-        }
-      });
-    }
+    Swal.fire({
+      title: this.translateService.instant('FEES_PAGE.DELETE_CONFIRM_TITLE'),
+      text: this.translateService.instant('FEES_PAGE.DELETE_CONFIRM_TEXT', { childName: fee.childName }),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: this.translateService.instant('FEES_PAGE.YES_DELETE'),
+      cancelButtonText: this.translateService.instant('FEES_PAGE.CANCEL')
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.feeService.deleteFee(fee.id!).subscribe({
+          next: () => {
+            this.loadData();
+            Swal.fire(
+              this.translateService.instant('FEES_PAGE.DELETED'),
+              this.translateService.instant('FEES_PAGE.FEE_DELETED_SUCCESS'),
+              'success'
+            );
+          },
+          error: (error) => {
+            console.error('Error deleting fee:', error);
+            Swal.fire(
+              this.translateService.instant('FEES_PAGE.ERROR'),
+              this.translateService.instant('FEES_PAGE.DELETE_ERROR'),
+              'error'
+            );
+          }
+        });
+      }
+    });
   }
 
   getStatusClass(status: string): string {
     switch (status) {
-      case 'paid': return 'badge bg-success';
-      case 'overdue': return 'badge bg-danger';
-      case 'pending': return 'badge bg-warning';
+      case 'paid': return 'badge bg-success-2';
+      case 'overdue': return 'badge bg-danger-2';
+      case 'pending': return 'badge bg-warning-2';
       default: return 'badge bg-secondary';
     }
   }

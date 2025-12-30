@@ -7,12 +7,15 @@ import { ApiConfig } from '../../../core/config/api.config';
 import { ClassesService } from '../classes.service';
 import { ClassModel } from '../classes.interface';
 import { TitlePage, TitleAction, Breadcrumb } from '../../../shared/layouts/title-page/title-page';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { PageTitleService } from '../../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-class-detail',
   standalone: true,
-  imports: [CommonModule, TitlePage, FormsModule],
+  imports: [CommonModule, TitlePage, FormsModule, TranslateModule],
   templateUrl: './class-detail.component.html',
   styleUrls: ['./class-detail.component.scss']
 })
@@ -29,12 +32,9 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedTeacherIds: number[] = [];
   assignedTeachers: any[] = [];
   private niceSelect: any;
+  private langChangeSub?: Subscription;
 
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Classes', url: '/classes' },
-    { label: 'Class Details' }
-  ];
+  breadcrumbs: Breadcrumb[] = [];
 
   titleActions: TitleAction[] = [];
 
@@ -42,26 +42,44 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     private classesService: ClassesService,
     private router: Router,
     private route: ActivatedRoute,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit() {
     this.classId = Number(this.route.snapshot.paramMap.get('id'));
+    this.pageTitleService.setTitle(this.translate.instant('CLASSES.CLASS_DETAILS'));
+    this.setupBreadcrumbs();
     this.setupTitleActions();
     this.loadClass();
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.pageTitleService.setTitle(this.translate.instant('CLASSES.CLASS_DETAILS'));
+      this.setupBreadcrumbs();
+      this.setupTitleActions();
+    });
+  }
+
+  private setupBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.DASHBOARD'), url: '/dashboard' },
+      { label: this.translate.instant('CLASSES.TITLE'), url: '/classes' },
+      { label: this.classData?.name || this.translate.instant('CLASSES.CLASS_DETAILS') }
+    ];
   }
 
   setupTitleActions() {
     this.titleActions = [
       {
-        label: 'Back to Classes',
-        class: 'btn-outline-secondary btn-back',
+        label: this.translate.instant('CLASSES.BACK_TO_CLASSES'),
+        class: 'btn-btn-outline-secondary btn-cancel-global',
         icon: 'bi bi-arrow-left',
         action: () => this.goBack()
       },
       {
-        label: 'Edit Class',
-        class: 'btn-primary',
+        label: this.translate.instant('CLASSES.EDIT_CLASS'),
+        class: 'btn-edit-global-2',
         icon: 'bi bi-pencil-square',
         action: () => this.router.navigate(['/classes/edit', this.classId])
       }
@@ -149,6 +167,7 @@ export class ClassDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit() {}
 
   ngOnDestroy() {
+    this.langChangeSub?.unsubscribe();
     if (this.niceSelect) {
       this.niceSelect.destroy();
     }

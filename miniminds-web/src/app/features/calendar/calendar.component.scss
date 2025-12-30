@@ -27,13 +27,36 @@
 .main-information{
   margin-top: 35px;
 }
+.selected-day {
+  .card-header{
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #f0f0f0;
+    i {
+      font-size: 24px;
+      color: #7dd3c0;
+      margin-right: 12px;
+    }
+  }
+}
 /* FullCalendar Styles */
 ::ng-deep {
   .fc-header-toolbar{
     .fc-button{
-      background: transparent;
+      background: linear-gradient(135deg, #a8c5ff 0%, #7dd3c0 100%);
       border: none;
-      color: #2c3e50;
+      color: white;
+       &:hover{
+        background: #7dd3c0;
+        color: white;
+      }
+      &:not(:disabled):active,&:active{
+        background: #7dd3c0;
+        color: white;
+      }
+      &:focus{
+        box-shadow: rgb(129 210 198 / 50%) 0px 0px 0px 0.2rem;
+      }
     }
   }
   .fc {
@@ -99,11 +122,11 @@
   }
 
   .fc-day-today {
-    background-color: #fff3cd !important;
+    background-color: transparent !important;
   }
 
   .fc-day-today .fc-daygrid-day-number {
-    background: #ffc107;
+    background: #a8c5ff;
     color: white;
     border-radius: 50%;
     width: 30px;
@@ -114,26 +137,52 @@
   }
 
   .fc-day.holiday .fc-daygrid-day-number {
-    color: #dc3545;
+    color: #dc3560;
     font-weight: 700;
   }
 
-  .fc-day-past {
-    background-color: #fff;
-  }
-
-  .fc-day-other {
-    opacity: 0.5;
-  }
-
   .fc-day.holiday {
-    background-color: #ffe6e6 !important;
+    .fc-daygrid-event.fc-event-end {
+      padding: 9px 6px;
+    }
+    .fc-daygrid-event-dot {
+      border-color: #dc3560 !important;
+    }
+    .fc-daygrid-event-harness {
+      background-color: #fbeaec;
+      border-radius: 5px;
+    }
+    .fc-event-title {
+      color: #dc3560 !important;
+    }
+  }
+
+  .event-day {
+    .fc-daygrid-event.fc-event-end {
+      padding: 9px 6px;
+    }
+    .fc-daygrid-event-dot {
+      border-color: #7dd3c0 !important;
+    }
+    .fc-daygrid-event-harness {
+      border-color: #7dd3c0 !important;
+      background-color: #effcf9;
+      border-radius: 5px;
+    }
+    .fc-event-title {
+      color: #7dd3c0 !important;
+    }
+  }
+
+  .fc-day.event-day .fc-daygrid-day-number {
+    color: #7dd3c0 !important;
+    font-weight: 700;
   }
 
   .fc-daygrid-event-harness {
     margin: 2px 0;
   }
-
+  
   .fc-daygrid-event-dot {
     @media screen and (max-width: 768px) {
       display: none;
@@ -168,7 +217,6 @@
     }
   }
 
-  fc-daygrid-dot-event
   .fc-event {
     display: block;
     padding: 2px 4px;
@@ -204,9 +252,7 @@
     opacity: 0.9;
   }
 
-  .fc-daygrid-block-event {
-    background: #0d6efd;
-  }
+
 
   .fc-daygrid-day-events {
     margin-top: 5px;
@@ -222,21 +268,33 @@
   }
 }
 
-.card-upcoming_calendar .name{
-  font-size: 15px;
-  font-weight: 500;
-  color: #202C4B;
-}
-.card-upcoming_calendar .time{
-  font-size: 12px;
-  font-weight: 400;
-  color: rgb(106, 114, 135);
-}
-.card-upcoming_calendar .type{
-  font-size: 12px;
-  font-weight: 400;
-  color: rgb(106, 114, 135);
-}
+.card-upcoming_calendar {
+  .card-header{
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #f0f0f0;
+    i {
+      font-size: 24px;
+      color: #7dd3c0;
+      margin-right: 12px;
+    }
+  }
+  .name{
+    font-size: 15px;
+    font-weight: 500;
+    color: #7dd3c0;
+  }
+  .time{
+    font-size: 12px;
+    font-weight: 400;
+    color: rgb(106, 114, 135);
+  }
+  .type{
+    font-size: 12px;
+    font-weight: 400;
+    color: rgb(106, 114, 135);
+  }
+} 
 .selected-event_day{
   font-size: 15px;
   font-weight: 500;
@@ -247,13 +305,11 @@
   font-weight: 400;
   color: rgb(106, 114, 135);
 }
-.fc-day-grid-event{
-  background-color: #202C4B !important;
-  background: #202C4B !important;
-}
+
 
 .border-primary{
-  border-color: #202C4B !important;
+  border-color: #7dd3c0!important;
+  background-color: #effcf9;
 }
 
 ::ng-deep {
@@ -267,3 +323,4 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)
   }
 }
+

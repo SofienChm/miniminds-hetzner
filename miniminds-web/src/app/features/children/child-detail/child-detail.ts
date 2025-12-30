@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ChildModel } from '../children.interface';
 import { ChildrenService } from '../children.service';
 import { ParentService } from '../../parent/parent.service';
@@ -11,10 +12,12 @@ import { TitlePage, TitleAction, Breadcrumb } from '../../../shared/layouts/titl
 import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
 import { ApiConfig } from '../../../core/config/api.config';
+import { ParentChildHeaderComponent } from '../../../shared/components/parent-child-header/parent-child-header.component';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-child-detail',
-  imports: [CommonModule, TitlePage, FormsModule],
+  imports: [CommonModule, TitlePage, FormsModule, ParentChildHeaderComponent, TranslateModule],
   standalone: true,
   templateUrl: './child-detail.html',
   styleUrl: './child-detail.scss'
@@ -28,12 +31,9 @@ export class ChildDetail implements OnInit {
   selectedParentId: number | null = null;
   relationshipType: string = 'Parent';
   isPrimaryContact: boolean = false;
+  currentParentIndex: number = 0;
 
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Children', url: '/children' },
-    { label: 'Child Details' }
-  ];
+  breadcrumbs: Breadcrumb[] = [];
   get isParent(): boolean {
       return this.authService.isParent();
   }
@@ -50,20 +50,39 @@ export class ChildDetail implements OnInit {
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private http: HttpClient
+    private http: HttpClient,
+    private location: Location,
+    private translate: TranslateService
   ) {}
 
   ngOnInit() {
     this.childId = Number(this.route.snapshot.paramMap.get('id'));
+    this.initBreadcrumbs();
     this.setupTitleActions();
     this.loadChild();
+
+    // Update translations when language changes
+    this.translate.onLangChange.subscribe(() => {
+      this.initBreadcrumbs();
+      this.setupTitleActions();
+    });
   }
 
+  private initBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.CHILDREN'), url: '/children' },
+      { label: this.translate.instant('CHILD_DETAIL.BREADCRUMB') }
+    ];
+  }
+
+  back() {
+    this.location.back();
+  }
   setupTitleActions() {
     this.titleActions = [
       {
-        label: 'Back to Children',
-        class: 'btn-outline-secondary btn-cancel-global',
+        label: this.translate.instant('CHILD_DETAIL.BACK_TO_CHILDREN'),
+        class: 'btn-cancel-2',
         icon: 'bi bi-arrow-left',
         action: () => this.goBack()
       }
@@ -71,8 +90,8 @@ export class ChildDetail implements OnInit {
 
     if (this.authService.isAdmin() || this.authService.isTeacher()) {
       this.titleActions.push({
-        label: 'Edit Child',
-        class: 'btn-primary',
+        label: this.translate.instant('CHILD_DETAIL.EDIT_CHILD'),
+        class: 'btn-edit-global-2',
         icon: 'bi bi-pencil-square',
         action: () => this.router.navigate(['/children/edit', this.childId])
       });
@@ -84,6 +103,11 @@ export class ChildDetail implements OnInit {
     this.childrenService.getChild(this.childId).subscribe({
       next: (child) => {
         this.child = child;
+        console.log('Child loaded:', child);
+        console.log('Parent:', child.parent);
+        console.log('Parent profilePicture:', child.parent?.profilePicture);
+        console.log('ChildParents:', child.childParents);
+        this.currentParentIndex = 0;
         this.loading = false;
       },
       error: (error) => {
@@ -103,6 +127,10 @@ export class ChildDetail implements OnInit {
       age--;
     }
     return age;
+  }
+
+  getProfilePicture(picture: string | undefined | null, defaultPicture: string = 'assets/default-avatar.svg'): string {
+    return picture && picture.trim() !== '' ? picture : defaultPicture;
   }
 
   goBack() {
@@ -147,8 +175,8 @@ export class ChildDetail implements OnInit {
         this.loadChild();
         Swal.fire({
           icon: 'success',
-          title: 'Success!',
-          text: 'Parent added successfully',
+          title: this.translate.instant('MESSAGES.SUCCESS'),
+          text: this.translate.instant('CHILD_DETAIL.PARENT_ADDED_SUCCESS'),
           timer: 2000,
           showConfirmButton: false
         });
@@ -157,8 +185,8 @@ export class ChildDetail implements OnInit {
         console.error('Error adding parent:', error);
         Swal.fire({
           icon: 'error',
-          title: 'Error!',
-          text: 'Failed to add parent'
+          title: this.translate.instant('MESSAGES.ERROR'),
+          text: this.translate.instant('CHILD_DETAIL.PARENT_ADD_ERROR')
         });
       }
     });
@@ -166,14 +194,14 @@ export class ChildDetail implements OnInit {
 
   removeParent(childParentId: number) {
     Swal.fire({
-      title: 'Are you sure?',
-      text: 'Remove this parent from the child?',
+      title: this.translate.instant('CHILD_DETAIL.CONFIRM_REMOVE_TITLE'),
+      text: this.translate.instant('CHILD_DETAIL.CONFIRM_REMOVE_TEXT'),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, remove it!',
-      cancelButtonText: 'Cancel'
+      confirmButtonText: this.translate.instant('CHILD_DETAIL.YES_REMOVE'),
+      cancelButtonText: this.translate.instant('COMMON.CANCEL')
     }).then((result) => {
       if (result.isConfirmed) {
         this.http.delete(`${ApiConfig.ENDPOINTS.CHILDREN}/remove-parent/${childParentId}`).subscribe({
@@ -181,8 +209,8 @@ export class ChildDetail implements OnInit {
             this.loadChild();
             Swal.fire({
               icon: 'success',
-              title: 'Removed!',
-              text: 'Parent has been removed successfully',
+              title: this.translate.instant('CHILD_DETAIL.REMOVED_TITLE'),
+              text: this.translate.instant('CHILD_DETAIL.PARENT_REMOVED_SUCCESS'),
               timer: 2000,
               showConfirmButton: false
             });
@@ -191,8 +219,8 @@ export class ChildDetail implements OnInit {
             console.error('Error removing parent:', error);
             Swal.fire({
               icon: 'error',
-              title: 'Error!',
-              text: 'Failed to remove parent'
+              title: this.translate.instant('MESSAGES.ERROR'),
+              text: this.translate.instant('CHILD_DETAIL.PARENT_REMOVE_ERROR')
             });
           }
         });
@@ -216,5 +244,21 @@ export class ChildDetail implements OnInit {
 
   editChild() {
     this.router.navigate(['/children/edit', this.childId]);
+  }
+
+  get currentChildParent() {
+    if (!this.child?.childParents || this.child.childParents.length === 0) return null;
+    const idx = Math.max(0, Math.min(this.currentParentIndex, this.child.childParents.length - 1));
+    return this.child.childParents[idx];
+  }
+
+  nextParent() {
+    if (!this.child?.childParents || this.child.childParents.length <= 1) return;
+    this.currentParentIndex = (this.currentParentIndex + 1) % this.child.childParents.length;
+  }
+
+  prevParent() {
+    if (!this.child?.childParents || this.child.childParents.length <= 1) return;
+    this.currentParentIndex = (this.currentParentIndex - 1 + this.child.childParents.length) % this.child.childParents.length;
   }
 }

@@ -34,5 +34,9 @@ namespace DaycareAPI.Models
         // Navigation property
         [ForeignKey("ChildId")]
         public Child? Child { get; set; }
+
+        // Navigation properties for comments and photos
+        public ICollection<ActivityComment>? Comments { get; set; }
+        public ICollection<Photo>? Photos { get; set; }
     }
 }

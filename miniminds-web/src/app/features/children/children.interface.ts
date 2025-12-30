@@ -33,7 +33,8 @@ export interface ChildModel {
   allergies?: string;
   medicalNotes?: string;
   profilePicture?: string;
-  parentId: number; // Keep for backward compatibility
+  hasProfilePicture?: boolean;
+  parentId?: number; // Keep for backward compatibility
   enrollmentDate?: string;
   isActive?: boolean;
   parent?: ParentInfo; // Keep for backward compatibility

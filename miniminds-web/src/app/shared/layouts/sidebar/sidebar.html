@@ -51,9 +51,10 @@
         <h6 class="submenu-hdr"><span>People</span></h6>
       </li>
       <li class="nav-item" *ngFor="let item of menuItemsPeople">
-        <a 
-          [routerLink]="item.path" 
+        <a
+          [routerLink]="item.path"
           routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: false }"
           (click)="onLinkClick()"
           class="nav-link text-dark d-flex align-items-center py-1 px-3 rounded mb-1">
           <i class="bi {{ item.icon }} me-3 fs-5"></i>

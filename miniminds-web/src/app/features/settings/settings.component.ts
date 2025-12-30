@@ -1,53 +1,52 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { TitlePage, Breadcrumb } from '../../shared/layouts/title-page/title-page';
 import { PrefixService } from '../../core/services/prefix/prefix.service';
 import { AuthService } from '../../core/services/auth';
 import { LanguageService } from '../../core/services/langauge-service';
+import { CurrencyService } from '../../core/services/currency/currency.service';
 import { ApiConfig } from '../../core/config/api.config';
+import { SKIP_ERROR_HANDLER } from '../../core/interceptors/error.interceptor';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, TranslateModule, FormsModule, TitlePage],
+  imports: [CommonModule, TranslateModule, FormsModule, TitlePage, NgSelectModule],
   templateUrl: './settings.component.html',
-  styleUrl: './settings.component.scss'
+  styleUrls: ['./settings.component.scss']
 })
 export class SettingsComponent implements OnInit {
   private translate = inject(TranslateService);
   private prefixService = inject(PrefixService);
   private authService = inject(AuthService);
-  private router = inject(Router);
   private http = inject(HttpClient);
   private readonly languageService = inject(LanguageService);
+  private readonly currencyService = inject(CurrencyService);
 
   isAdmin = false;
-  
+  selectedLanguage: string = '';
+
   languages = [
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'it', name: 'Italiano', flag: '🇮🇹' }
+    { code: 'en', name: 'English', flag: '🇪🇳', label: '🇪🇳 English' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷', label: '🇫🇷 Français' },
+    { code: 'it', name: 'Italiano', flag: '🇮🇹', label: '🇮🇹 Italiano' }
   ];
 
-  currencies = [
-    { code: 'USD', symbol: '$', name: 'US Dollar' },
-    { code: 'EUR', symbol: '€', name: 'Euro' },
-    { code: 'GBP', symbol: '£', name: 'British Pound' }
-  ];
+  currencies = this.currencyService.getCurrencies();
 
   countries = [
-    { code: 'US', name: 'United States', flag: '🇺🇸' },
-    { code: 'FR', name: 'France', flag: '🇫🇷' },
-    { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-    { code: 'CA', name: 'Canada', flag: '🇨🇦' }
+    { code: 'US', name: 'United States', flag: '🇺🇸', label: '🇺🇸 United States' },
+    { code: 'FR', name: 'France', flag: '🇫🇷', label: '🇫🇷 France' },
+    { code: 'IT', name: 'Italy', flag: '🇮🇹', label: '🇮🇹 Italy' },
+    { code: 'CA', name: 'Canada', flag: '🇨🇦', label: '🇨🇦 Canada' }
   ];
 
-  selectedCurrency: string = localStorage.getItem('selectedCurrency') || 'USD';
+  selectedCurrency: string = this.currencyService.getSelectedCurrencyCode();
   selectedCountry: string = localStorage.getItem('selectedCountry') || 'US';
   childPrefix: string = this.prefixService.getChildPrefix();
   parentPrefix: string = this.prefixService.getParentPrefix();
@@ -62,17 +61,21 @@ export class SettingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.isAdmin = this.authService.isAdmin();
+    this.selectedLanguage = this.translate.currentLang;
     if (this.isAdmin) {
       this.loadLeaveSettings();
     }
   }
 
   loadLeaveSettings(): void {
-    this.http.get<any>(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultAnnualLeaveDays`).subscribe({
+    // Use silent requests - these settings are optional and have defaults
+    const silentHeaders = new HttpHeaders().set(SKIP_ERROR_HANDLER, 'true');
+
+    this.http.get<any>(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultAnnualLeaveDays`, { headers: silentHeaders }).subscribe({
       next: (setting) => this.defaultAnnualLeaveDays = parseInt(setting.value),
       error: () => this.defaultAnnualLeaveDays = 30
     });
-    this.http.get<any>(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultMedicalLeaveDays`).subscribe({
+    this.http.get<any>(`${ApiConfig.ENDPOINTS.SETTINGS}/DefaultMedicalLeaveDays`, { headers: silentHeaders }).subscribe({
       next: (setting) => this.defaultMedicalLeaveDays = parseInt(setting.value),
       error: () => this.defaultMedicalLeaveDays = 10
     });
@@ -84,8 +87,8 @@ export class SettingsComponent implements OnInit {
       next: () => {
         Swal.fire({
           icon: 'success',
-          title: 'Success!',
-          text: 'Leave settings saved successfully!',
+          title: this.translate.instant('SETTINGS.SUCCESS'),
+          text: this.translate.instant('SETTINGS.LEAVE_SAVED'),
           timer: 2000,
           showConfirmButton: false
         });
@@ -93,8 +96,8 @@ export class SettingsComponent implements OnInit {
       error: () => {
         Swal.fire({
           icon: 'error',
-          title: 'Error!',
-          text: 'Failed to save leave settings',
+          title: this.translate.instant('SETTINGS.ERROR'),
+          text: this.translate.instant('SETTINGS.LEAVE_SAVE_FAILED'),
           confirmButtonColor: '#d33'
         });
       }
@@ -110,7 +113,7 @@ export class SettingsComponent implements OnInit {
   }
 
   onCurrencyChange(): void {
-    localStorage.setItem('selectedCurrency', this.selectedCurrency);
+    this.currencyService.setSelectedCurrency(this.selectedCurrency);
   }
 
   onCountryChange(): void {
@@ -123,20 +126,7 @@ export class SettingsComponent implements OnInit {
     if (type === 'educator') localStorage.setItem('educatorPrefix', this.educatorPrefix);
   }
 
-/*  saveLanguage(): void {
-    localStorage.setItem('lang', this.currentLang);
-    
-    this.authService.updateLanguage(this.currentLang)
-      .subscribe({
-        next: () => alert('Language saved successfully!'),
-        error: (err) => {
-          console.error('Failed to save language', err);
-          alert('Language saved locally but failed to sync to server');
-        }
-      });
-  }*/
-
-    saveLanguage(): void {
+  saveLanguage(): void {
     this.languageService.use(this.currentLang);
 
     this.authService.updateLanguage(this.currentLang)
@@ -144,8 +134,8 @@ export class SettingsComponent implements OnInit {
         next: () => {
           Swal.fire({
             icon: 'success',
-            title: 'Success!',
-            text: 'Language saved successfully!',
+            title: this.translate.instant('SETTINGS.SUCCESS'),
+            text: this.translate.instant('SETTINGS.LANGUAGE_SAVED'),
             timer: 2000,
             showConfirmButton: false
           });
@@ -153,25 +143,24 @@ export class SettingsComponent implements OnInit {
         error: () => {
           Swal.fire({
             icon: 'warning',
-            title: 'Partial Success',
-            text: 'Saved locally but failed to sync to server',
+            title: this.translate.instant('SETTINGS.PARTIAL_SUCCESS'),
+            text: this.translate.instant('SETTINGS.LANGUAGE_SAVED_LOCALLY'),
             timer: 2000
           });
         }
       });
   }
 
-
   saveSettings(): void {
-    localStorage.setItem('selectedCurrency', this.selectedCurrency);
+    this.currencyService.setSelectedCurrency(this.selectedCurrency);
     localStorage.setItem('selectedCountry', this.selectedCountry);
     this.prefixService.setChildPrefix(this.childPrefix);
     this.prefixService.setParentPrefix(this.parentPrefix);
     this.prefixService.setEducatorPrefix(this.educatorPrefix);
     Swal.fire({
       icon: 'success',
-      title: 'Success!',
-      text: 'Settings saved successfully!',
+      title: this.translate.instant('SETTINGS.SUCCESS'),
+      text: this.translate.instant('SETTINGS.SETTINGS_SAVED'),
       timer: 2000,
       showConfirmButton: false
     });

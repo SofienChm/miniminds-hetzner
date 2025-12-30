@@ -19,6 +19,47 @@ namespace DaycareAPI.Migrations
                 .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            modelBuilder.Entity("DaycareAPI.Models.ActivityComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("ActivityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int?>("ParentCommentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentCommentId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ActivityId", "CreatedAt");
+
+                    b.ToTable("ActivityComments");
+                });
+
             modelBuilder.Entity("DaycareAPI.Models.AppSetting", b =>
                 {
                     b.Property<int>("Id")
@@ -438,6 +479,49 @@ namespace DaycareAPI.Migrations
                     b.ToTable("DaycarePrograms");
                 });
 
+            modelBuilder.Entity("DaycareAPI.Models.DeviceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeviceModel")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Platform");
+
+                    b.ToTable("DeviceTokens");
+                });
+
             modelBuilder.Entity("DaycareAPI.Models.Event", b =>
                 {
                     b.Property<int>("Id")
@@ -572,6 +656,10 @@ namespace DaycareAPI.Migrations
                     b.Property<DateTime?>("PaidDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<string>("PaymentNotes")
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
@@ -581,6 +669,10 @@ namespace DaycareAPI.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -589,6 +681,73 @@ namespace DaycareAPI.Migrations
                     b.HasIndex("ChildId");
 
                     b.ToTable("Fees");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.FoodItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Allergens")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int?>("Calories")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Carbohydrates")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("DietaryTags")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<decimal?>("Fat")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<decimal?>("Fiber")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<decimal?>("Protein")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<decimal?>("Sugar")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("FoodItems");
                 });
 
             modelBuilder.Entity("DaycareAPI.Models.Holiday", b =>
@@ -680,6 +839,163 @@ namespace DaycareAPI.Migrations
                     b.HasIndex("TeacherId");
 
                     b.ToTable("LeaveRequests");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.Menu", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("CreatedById")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsTemplate")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("MeetsDairyRequirement")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("MeetsFruitVegRequirement")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("MeetsGrainRequirement")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("MeetsProteinRequirement")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("MenuDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("MenuType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("MenuDate");
+
+                    b.HasIndex("MenuDate", "MenuType");
+
+                    b.ToTable("Menus");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.MenuItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FoodItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MealType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("MenuId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("ServingSize")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FoodItemId");
+
+                    b.HasIndex("MenuId", "MealType");
+
+                    b.ToTable("MenuItems");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.MenuSelection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChildId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsSelected")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("MenuId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int>("ParentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SelectionStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuId");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("ChildId", "MenuId");
+
+                    b.HasIndex("ChildId", "MenuId", "MenuItemId")
+                        .IsUnique();
+
+                    b.ToTable("MenuSelections");
                 });
 
             modelBuilder.Entity("DaycareAPI.Models.Message", b =>
@@ -836,6 +1152,90 @@ namespace DaycareAPI.Migrations
                     b.ToTable("Parents");
                 });
 
+            modelBuilder.Entity("DaycareAPI.Models.Photo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ActivityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("ChildId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("FilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("ImageData")
+                        .HasColumnType("LONGTEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int?>("RelatedEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("ThumbnailData")
+                        .HasColumnType("MEDIUMTEXT");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UploadedById")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityId");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("UploadedById");
+
+                    b.HasIndex("ChildId", "CreatedAt");
+
+                    b.ToTable("Photos");
+                });
+
             modelBuilder.Entity("DaycareAPI.Models.ProgramEnrollment", b =>
                 {
                     b.Property<int>("Id")
@@ -859,6 +1259,41 @@ namespace DaycareAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("ProgramEnrollments");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.QrCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("QrCodes");
                 });
 
             modelBuilder.Entity("DaycareAPI.Models.Reclamation", b =>
@@ -902,6 +1337,40 @@ namespace DaycareAPI.Migrations
                     b.HasIndex("SenderId");
 
                     b.ToTable("Reclamations");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.SchoolSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("GeofenceEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("GeofenceRadiusMeters")
+                        .HasColumnType("int");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("double");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("double");
+
+                    b.Property<string>("SchoolName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SchoolSettings");
                 });
 
             modelBuilder.Entity("DaycareAPI.Models.Teacher", b =>
@@ -1097,6 +1566,32 @@ namespace DaycareAPI.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("DaycareAPI.Models.ActivityComment", b =>
+                {
+                    b.HasOne("DaycareAPI.Models.DailyActivity", "Activity")
+                        .WithMany("Comments")
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DaycareAPI.Models.ActivityComment", "ParentComment")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentCommentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DaycareAPI.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
+
+                    b.Navigation("ParentComment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DaycareAPI.Models.Attendance", b =>
                 {
                     b.HasOne("DaycareAPI.Models.Child", "Child")
@@ -1196,6 +1691,17 @@ namespace DaycareAPI.Migrations
                     b.Navigation("Child");
                 });
 
+            modelBuilder.Entity("DaycareAPI.Models.DeviceToken", b =>
+                {
+                    b.HasOne("DaycareAPI.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DaycareAPI.Models.EventParticipant", b =>
                 {
                     b.HasOne("DaycareAPI.Models.Child", "Child")
@@ -1243,6 +1749,70 @@ namespace DaycareAPI.Migrations
                     b.Navigation("Teacher");
                 });
 
+            modelBuilder.Entity("DaycareAPI.Models.Menu", b =>
+                {
+                    b.HasOne("DaycareAPI.Models.Teacher", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.MenuItem", b =>
+                {
+                    b.HasOne("DaycareAPI.Models.FoodItem", "FoodItem")
+                        .WithMany("MenuItems")
+                        .HasForeignKey("FoodItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DaycareAPI.Models.Menu", "Menu")
+                        .WithMany("MenuItems")
+                        .HasForeignKey("MenuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FoodItem");
+
+                    b.Navigation("Menu");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.MenuSelection", b =>
+                {
+                    b.HasOne("DaycareAPI.Models.Child", "Child")
+                        .WithMany()
+                        .HasForeignKey("ChildId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DaycareAPI.Models.Menu", "Menu")
+                        .WithMany()
+                        .HasForeignKey("MenuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DaycareAPI.Models.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DaycareAPI.Models.Parent", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Child");
+
+                    b.Navigation("Menu");
+
+                    b.Navigation("MenuItem");
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("DaycareAPI.Models.Message", b =>
                 {
                     b.HasOne("DaycareAPI.Models.Message", "ParentMessage")
@@ -1266,6 +1836,31 @@ namespace DaycareAPI.Migrations
                     b.Navigation("Recipient");
 
                     b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.Photo", b =>
+                {
+                    b.HasOne("DaycareAPI.Models.DailyActivity", "Activity")
+                        .WithMany("Photos")
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("DaycareAPI.Models.Child", "Child")
+                        .WithMany()
+                        .HasForeignKey("ChildId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DaycareAPI.Models.ApplicationUser", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Activity");
+
+                    b.Navigation("Child");
+
+                    b.Navigation("UploadedBy");
                 });
 
             modelBuilder.Entity("DaycareAPI.Models.ProgramEnrollment", b =>
@@ -1357,6 +1952,11 @@ namespace DaycareAPI.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DaycareAPI.Models.ActivityComment", b =>
+                {
+                    b.Navigation("Replies");
+                });
+
             modelBuilder.Entity("DaycareAPI.Models.Child", b =>
                 {
                     b.Navigation("Attendances");
@@ -1364,6 +1964,13 @@ namespace DaycareAPI.Migrations
                     b.Navigation("ChildParents");
 
                     b.Navigation("DailyActivities");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.DailyActivity", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("Photos");
                 });
 
             modelBuilder.Entity("DaycareAPI.Models.DaycareProgram", b =>
@@ -1374,6 +1981,16 @@ namespace DaycareAPI.Migrations
             modelBuilder.Entity("DaycareAPI.Models.Event", b =>
                 {
                     b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.FoodItem", b =>
+                {
+                    b.Navigation("MenuItems");
+                });
+
+            modelBuilder.Entity("DaycareAPI.Models.Menu", b =>
+                {
+                    b.Navigation("MenuItems");
                 });
 
             modelBuilder.Entity("DaycareAPI.Models.Message", b =>

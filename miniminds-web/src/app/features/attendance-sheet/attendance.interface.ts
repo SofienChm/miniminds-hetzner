@@ -12,6 +12,7 @@ export interface Attendance {
     id: number;
     firstName: string;
     lastName: string;
+    profilePicture?: string | null;
     parent?: {
       firstName: string;
       lastName: string;

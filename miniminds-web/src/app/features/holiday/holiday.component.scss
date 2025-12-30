@@ -16,9 +16,29 @@
 }
 
 .badge-secondary {
-  background-color: #6c757d;
+  background-color: var(--primary-color);
 }
 .holiday-style{
+  .card-header{
+    display: flex;
+    align-items: center;
+    h5{
+      font-size: 18px;
+      font-weight: 500;
+      color: #202C4B;
+      margin-bottom: 0;
+      align-items: center;
+      display: flex;
+      i {
+        font-size: 22px;
+        color: #7dd3c0;
+        margin-right: 10px;
+      }
+    }
+  }
+  .table-responsive {
+    overflow: visible;
+  }
   .table-holiday{
     thead{
       tr{
@@ -45,5 +65,11 @@
         }
       }
     }
+  }
+}
+
+.holiday-style{
+  .card-body{
+    padding: 0;
   }
 }

@@ -6,6 +6,7 @@ export interface ParentModel {
   address?: string;
   phoneNumber: string;
   profilePicture?: string;
+  hasProfilePicture?: boolean;
   emergencyContact?: string;
   gender?: string;
   dateOfBirth?: string;
@@ -28,6 +29,7 @@ export interface ChildInfo {
   allergies?: string;
   medicalNotes?: string;
   profilePicture?: string;
+  hasProfilePicture?: boolean;
   enrollmentDate: string;
   age?: number;
   isActive?: boolean;

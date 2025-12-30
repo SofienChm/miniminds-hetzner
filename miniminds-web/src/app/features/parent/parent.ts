@@ -1,20 +1,24 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 import { ParentModel } from './parent.interface';
 import { ParentService } from './parent.service';
 import { TitlePage, TitleAction, Breadcrumb, DropdownItem } from '../../shared/layouts/title-page/title-page';
 import { ExportUtil } from '../../shared/utils/export.util';
+import { PageTitleService } from '../../core/services/page-title.service';
 
 @Component({
   selector: 'app-parent',
   standalone: true,
-  imports: [CommonModule, FormsModule, TitlePage],
+  imports: [CommonModule, FormsModule, TitlePage, NgSelectModule, TranslateModule],
   templateUrl: './parent.html',
   styleUrl: './parent.scss'
 })
-export class Parent implements OnInit {
+export class Parent implements OnInit, OnDestroy {
   parents: ParentModel[] = [];
   filteredParents: ParentModel[] = [];
   displayedParents: ParentModel[] = [];
@@ -27,51 +31,88 @@ export class Parent implements OnInit {
   showSortMenu = false;
   isAdmin = true; // TODO: Get from auth service
   searchTerm: string = '';
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Parents' }
-  ];
-
-  titleActions: TitleAction[] = [
-    {
-      label: 'Export',
-      class: 'btn btn-light me-2',
-      action: () => {},
-      dropdown: {
-        items: [
-          {
-            label: 'Export as PDF',
-            icon: 'bi bi-file-earmark-pdf',
-            action: () => this.exportToPDF()
-          },
-          {
-            label: 'Export as Excel',
-            icon: 'bi bi-file-earmark-excel', 
-            action: () => this.exportToExcel()
-          }
-        ]
-      }
-    },
-    {
-      label: 'Add Parent',
-      class: 'btn btn-primary',
-      action: () => this.router.navigate(['/parents/add'])
-    }
-  ];
+  breadcrumbs: Breadcrumb[] = [];
+  titleActions: TitleAction[] = [];
+  sortOptions: { value: string; label: string; icon: string }[] = [];
+  private langChangeSub?: Subscription;
+  private parentsSub?: Subscription;
 
 
 
   constructor(
     private parentService: ParentService,
-    private router: Router
+    private router: Router,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit() {
+    this.pageTitleService.setTitle(this.translate.instant('PARENTS.TITLE'));
+    this.setupBreadcrumbs();
+    this.setupTitleActions();
+    this.setupSortOptions();
     this.loadParents();
-    this.parentService.parents$.subscribe(parents => {
+    this.parentsSub = this.parentService.parents$.subscribe(parents => {
       this.parents = parents;
       this.applySort();
     });
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.pageTitleService.setTitle(this.translate.instant('PARENTS.TITLE'));
+      this.setupBreadcrumbs();
+      this.setupTitleActions();
+      this.setupSortOptions();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
+    this.parentsSub?.unsubscribe();
+  }
+
+  private setupBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.DASHBOARD'), url: '/dashboard' },
+      { label: this.translate.instant('PARENTS.TITLE') }
+    ];
+  }
+
+  private setupTitleActions(): void {
+    this.titleActions = [
+      {
+        label: this.translate.instant('COMMON.EXPORT'),
+        class: 'btn btn-light me-2',
+        action: () => {},
+        dropdown: {
+          items: [
+            {
+              label: this.translate.instant('COMMON.EXPORT_PDF'),
+              icon: 'bi bi-file-earmark-pdf',
+              action: () => this.exportToPDF()
+            },
+            {
+              label: this.translate.instant('COMMON.EXPORT_EXCEL'),
+              icon: 'bi bi-file-earmark-excel',
+              action: () => this.exportToExcel()
+            }
+          ]
+        }
+      },
+      {
+        label: this.translate.instant('PARENTS.ADD_PARENT'),
+        class: '',
+        action: () => this.router.navigate(['/parents/add'])
+      }
+    ];
+  }
+
+  private setupSortOptions(): void {
+    this.sortOptions = [
+      { value: 'name-asc', label: this.translate.instant('COMMON.SORT_A_TO_Z'), icon: 'bi-sort-alpha-down' },
+      { value: 'name-desc', label: this.translate.instant('COMMON.SORT_Z_TO_A'), icon: 'bi-sort-alpha-up' },
+      { value: 'recent-added', label: this.translate.instant('COMMON.RECENTLY_ADDED'), icon: 'bi-calendar-check' },
+      { value: 'email-asc', label: this.translate.instant('COMMON.SORT_BY_EMAIL'), icon: 'bi-envelope' }
+    ];
   }
 
   loadParents() {
@@ -108,8 +149,20 @@ export class Parent implements OnInit {
 
 
 
-  deleteParent(id: number) {
-    if (window.confirm('Are you sure you want to delete this parent?')) {
+  async deleteParent(id: number) {
+    const { default: Swal } = await import('sweetalert2');
+    const result = await Swal.fire({
+      title: this.translate.instant('PARENTS.DELETE_CONFIRM_TITLE'),
+      text: this.translate.instant('PARENTS.DELETE_CONFIRM_TEXT'),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: this.translate.instant('COMMON.YES_DELETE'),
+      cancelButtonText: this.translate.instant('COMMON.CANCEL')
+    });
+
+    if (result.isConfirmed) {
       this.parentService.deleteParent(id).subscribe({
         next: () => {
           this.loadParents();
@@ -126,15 +179,15 @@ export class Parent implements OnInit {
       // Activating parent - simple confirmation
       const { default: Swal } = await import('sweetalert2');
       const result = await Swal.fire({
-        title: 'Activate Parent',
-        text: `Are you sure you want to activate ${parent.firstName} ${parent.lastName}?`,
+        title: this.translate.instant('PARENTS.ACTIVATE_PARENT'),
+        text: this.translate.instant('PARENTS.ACTIVATE_CONFIRM', { name: `${parent.firstName} ${parent.lastName}` }),
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#28a745',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Yes, activate'
+        confirmButtonText: this.translate.instant('PARENTS.YES_ACTIVATE')
       });
-      
+
       if (result.isConfirmed) {
         this.parentService.toggleParentStatus(parent.id!, false).subscribe({
           next: () => this.loadParents(),
@@ -145,22 +198,22 @@ export class Parent implements OnInit {
       // Deactivating parent - ask about children
       const { default: Swal } = await import('sweetalert2');
       const hasChildren = parent.children && parent.children.length > 0;
-      
+
       if (hasChildren) {
         const result = await Swal.fire({
-          title: 'Deactivate Parent',
-          text: `${parent.firstName} ${parent.lastName} has ${parent.children!.length} child(ren). What would you like to do?`,
+          title: this.translate.instant('PARENTS.DEACTIVATE_PARENT'),
+          text: this.translate.instant('PARENTS.DEACTIVATE_WITH_CHILDREN', { name: `${parent.firstName} ${parent.lastName}`, count: parent.children!.length }),
           icon: 'warning',
           showCancelButton: true,
           showDenyButton: true,
           confirmButtonColor: '#dc3545',
           denyButtonColor: '#ffc107',
           cancelButtonColor: '#6c757d',
-          confirmButtonText: 'Deactivate parent and children',
-          denyButtonText: 'Deactivate parent only',
-          cancelButtonText: 'Cancel'
+          confirmButtonText: this.translate.instant('PARENTS.DEACTIVATE_PARENT_AND_CHILDREN'),
+          denyButtonText: this.translate.instant('PARENTS.DEACTIVATE_PARENT_ONLY'),
+          cancelButtonText: this.translate.instant('COMMON.CANCEL')
         });
-        
+
         if (result.isConfirmed) {
           // Deactivate parent and children
           this.parentService.toggleParentStatus(parent.id!, true).subscribe({
@@ -177,15 +230,15 @@ export class Parent implements OnInit {
       } else {
         // No children - simple deactivation
         const result = await Swal.fire({
-          title: 'Deactivate Parent',
-          text: `Are you sure you want to deactivate ${parent.firstName} ${parent.lastName}?`,
+          title: this.translate.instant('PARENTS.DEACTIVATE_PARENT'),
+          text: this.translate.instant('PARENTS.DEACTIVATE_CONFIRM', { name: `${parent.firstName} ${parent.lastName}` }),
           icon: 'warning',
           showCancelButton: true,
           confirmButtonColor: '#dc3545',
           cancelButtonColor: '#6c757d',
-          confirmButtonText: 'Yes, deactivate'
+          confirmButtonText: this.translate.instant('PARENTS.YES_DEACTIVATE')
         });
-        
+
         if (result.isConfirmed) {
           this.parentService.toggleParentStatus(parent.id!, false).subscribe({
             next: () => this.loadParents(),
@@ -200,6 +253,10 @@ export class Parent implements OnInit {
     this.router.navigate(['/parents/detail', parent.id]);
   }
 
+  viewChildDetails(childId: number) {
+    this.router.navigate(['/children/detail', childId]);
+  }
+
 
 
 
@@ -211,6 +268,10 @@ export class Parent implements OnInit {
   setSortBy(sortBy: string) {
     this.sortBy = sortBy;
     this.showSortMenu = false;
+    this.applySort();
+  }
+
+  onSortChange() {
     this.applySort();
   }
 
@@ -257,11 +318,11 @@ export class Parent implements OnInit {
 
   getSortLabel(): string {
     switch (this.sortBy) {
-      case 'name-asc': return 'Sort by A-Z';
-      case 'name-desc': return 'Sort by Z-A';
-      case 'recent-added': return 'Recently Added';
-      case 'email-asc': return 'Sort by Email';
-      default: return 'Sort by A-Z';
+      case 'name-asc': return this.translate.instant('COMMON.SORT_A_TO_Z');
+      case 'name-desc': return this.translate.instant('COMMON.SORT_Z_TO_A');
+      case 'recent-added': return this.translate.instant('COMMON.RECENTLY_ADDED');
+      case 'email-asc': return this.translate.instant('COMMON.SORT_BY_EMAIL');
+      default: return this.translate.instant('COMMON.SORT_A_TO_Z');
     }
   }
 
@@ -271,25 +332,30 @@ export class Parent implements OnInit {
 
   exportToPDF(): void {
     const data = this.filteredParents.map(parent => ({
-      'Name': `${parent.firstName} ${parent.lastName}`,
-      'Email': parent.email,
-      'Phone': parent.phoneNumber,
-      'Address': parent.address || 'N/A',
-      'Emergency Contact': parent.emergencyContact || 'N/A'
+      [this.translate.instant('PARENTS.NAME')]: `${parent.firstName} ${parent.lastName}`,
+      [this.translate.instant('PARENTS.EMAIL')]: parent.email,
+      [this.translate.instant('PARENTS.PHONE')]: parent.phoneNumber,
+      [this.translate.instant('PARENTS.ADDRESS')]: parent.address || this.translate.instant('COMMON.NA'),
+      [this.translate.instant('PARENTS.EMERGENCY_CONTACT')]: parent.emergencyContact || this.translate.instant('COMMON.NA')
     }));
 
-    ExportUtil.exportToPDF(data, 'Parents Report');
+    ExportUtil.exportToPDF(data, this.translate.instant('PARENTS.REPORT_TITLE'));
   }
 
   exportToExcel(): void {
     const data = this.filteredParents.map(parent => ({
-      'Name': `${parent.firstName} ${parent.lastName}`,
-      'Email': parent.email,
-      'Phone': parent.phoneNumber,
-      'Address': parent.address || 'N/A',
-      'Emergency Contact': parent.emergencyContact || 'N/A'
+      [this.translate.instant('PARENTS.NAME')]: `${parent.firstName} ${parent.lastName}`,
+      [this.translate.instant('PARENTS.EMAIL')]: parent.email,
+      [this.translate.instant('PARENTS.PHONE')]: parent.phoneNumber,
+      [this.translate.instant('PARENTS.ADDRESS')]: parent.address || this.translate.instant('COMMON.NA'),
+      [this.translate.instant('PARENTS.EMERGENCY_CONTACT')]: parent.emergencyContact || this.translate.instant('COMMON.NA')
     }));
 
-    ExportUtil.exportToExcel(data, 'Parents Report');
+    ExportUtil.exportToExcel(data, this.translate.instant('PARENTS.REPORT_TITLE'));
+  }
+
+  // TrackBy function for ngFor performance optimization
+  trackById(index: number, item: ParentModel): number | undefined {
+    return item.id;
   }
 }

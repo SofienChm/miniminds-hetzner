@@ -225,6 +225,8 @@
 
 .calendar-day.has-event:hover {
   background: #e9ecef;
+  color: #202C4B;
+  transition: ease .5;
 }
 
 .calendar-day.has-holiday {

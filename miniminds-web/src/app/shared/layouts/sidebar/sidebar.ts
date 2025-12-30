@@ -57,9 +57,25 @@ export class Sidebar implements OnInit, OnDestroy {
     this.menuItemsChild = [
       { path: '/attendance', icon: 'bi-calendar-check', label: 'Attendance' },
       { path: '/activities', icon: 'bi-activity', label: 'Daily Report' },
+      { path: this.authService.isParent() ? '/food-menu/parent' : '/food-menu', icon: 'bi-egg-fried', label: 'Food Menu' },
       { path: '/classes', icon: 'bi-book', label: 'Classes' },
+      { path: '/gallery', icon: 'bi-images', label: 'Photo Gallery' },
       { path: '/learning-games', icon: 'bi-controller', label: 'Learning Games' }
     ];
+
+    // Add QR Check-in for parents
+    if (this.authService.isParent()) {
+      this.menuItemsChild.unshift(
+        { path: '/qr-checkin', icon: 'bi-qr-code-scan', label: 'QR Check-in' }
+      );
+    }
+
+    // Add QR Management for admins
+    if (this.authService.isAdmin()) {
+      this.menuItemsChild.push(
+        { path: '/qr-management', icon: 'bi-qr-code', label: 'QR Management' }
+      );
+    }
 
     // People items - role-based
     this.menuItemsPeople = [

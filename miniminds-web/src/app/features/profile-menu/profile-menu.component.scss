@@ -163,6 +163,14 @@
     &.activities {
       background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
     }
+
+    &.food  {
+      background: linear-gradient(135deg, #d1a0b9 0%, #a46b88 100%);
+    }
+
+    &.gallery  {
+      background: linear-gradient(135deg, #ff8fd5 0%, #fa059f 100%);
+    }
   }
   
   span {

@@ -23,6 +23,7 @@
 
 .nav-link {
   transition: background-color 0.3s;
+    padding: 7px 1rem !important;
 }
 
 .nav-link:hover {
@@ -30,8 +31,9 @@
 }
 
 .nav-link.active {
-  background-color: rgba(255, 255, 255, 0.2);
-  font-weight: 600;
+  background: linear-gradient(135deg, #a8c5ff 0%, #7dd3c0 100%);
+    font-weight: 600;
+    color: #0e567d !important;
 }
 .logo-img{
   width: 130px;
@@ -40,7 +42,6 @@
   font-weight: 600;
   font-size: 12px;
   color: #9CA1AF;
-  margin: 14px 0 14px 0;
   text-transform: uppercase;
   position: relative;
   display: flex;
@@ -65,6 +66,11 @@
 ;
     align-items: center;
     justify-content: center;
+}
+
+.nav-sidebar li .nav-link.active i{
+    color: #0e567d !important;
+    background: transparent !important;
 }
 .nav-sidebar {
   .nav-item{

@@ -49,4 +49,8 @@ export class ChildrenService {
   toggleChildStatus(id: number): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/toggle-status`, {});
   }
+
+  getChildProfilePicture(id: number): Observable<{ profilePicture: string }> {
+    return this.http.get<{ profilePicture: string }>(`${this.apiUrl}/${id}/profile-picture`);
+  }
 }

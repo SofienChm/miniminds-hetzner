@@ -1,4 +1,4 @@
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 
 export class ApiConfig {
   static readonly BASE_URL = environment.apiUrl;
@@ -21,7 +21,12 @@ export class ApiConfig {
     CLASSES: `${ApiConfig.BASE_URL}/classes`,
     SETTINGS: `${ApiConfig.BASE_URL}/settings`,
     PAYMENT: `${ApiConfig.BASE_URL}/Payment`,
-    RECLAMATION: `${ApiConfig.BASE_URL}/Reclamations`
-
+    RECLAMATION: `${ApiConfig.BASE_URL}/Reclamations`,
+    PHOTOS: `${ApiConfig.BASE_URL}/photos`,
+    ACTIVITY_COMMENTS: `${ApiConfig.BASE_URL}/activitycomments`,
+    FOOD_ITEMS: `${ApiConfig.BASE_URL}/fooditems`,
+    MENUS: `${ApiConfig.BASE_URL}/menus`,
+    MENU_SELECTIONS: `${ApiConfig.BASE_URL}/menuselections`,
+    DEVICE_TOKENS: `${ApiConfig.BASE_URL}/devicetokens`
   };
 }

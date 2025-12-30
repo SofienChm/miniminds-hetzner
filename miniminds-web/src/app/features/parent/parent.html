@@ -1,4 +1,4 @@
-<div class="container mt-4">
+<div class="container-fluid mt-4">
   <app-title-page 
     title="Parents Management" 
     subtitle="Manage parent information and details"
@@ -8,79 +8,55 @@
   </app-title-page>
 
   <!-- View Controls -->
-  <div class="bg-white p-3 border rounded-1 d-flex align-items-center justify-content-between flex-wrap mb-4">
+  <div class="bg-white p-3 border d-flex align-items-center justify-content-between flex-wrap mb-4 rounded-1">
     <h4 class="title-filter">Parents Grid</h4>
-    <div class="d-flex align-items-center flex-wrap">
+    <div class="d-flex align-items-center flex-wrap gap-2">
       <!-- Search Input -->
-      <div class="me-3">
-        <input 
-          type="text" 
-          class="form-control" 
-          placeholder="Search parents..." 
+      <div class="search-box">
+        <i class="bi bi-search search-icon"></i>
+        <input
+          type="text"
+          class="form-control search-input"
+          placeholder="Search parents..."
           [(ngModel)]="searchTerm"
-          (input)="onSearch()"
-          style="min-width: 200px;">
+          (input)="onSearch()">
       </div>
+
+      <!-- Sort Select -->
+      <ng-select
+        class="filter-select"
+        [(ngModel)]="sortBy"
+        [items]="sortOptions"
+        bindLabel="label"
+        bindValue="value"
+        placeholder="Sort by"
+        [clearable]="false"
+        [searchable]="false"
+        (change)="onSortChange()">
+        <ng-template ng-option-tmp let-item="item">
+          <div class="option-with-image">
+            <i class="bi {{item.icon}}" style="font-size: 16px; color: #7dd3c0;"></i>
+            <span class="option-title">{{ item.label }}</span>
+          </div>
+        </ng-template>
+      </ng-select>
+
       <!-- View Toggle -->
       <div class="d-flex align-items-center bg-white border rounded-2 p-1 me-2">
-        <button 
-          class="btn btn-icon btn-sm me-1" 
+        <button
+          class="btn btn-icon btn-sm me-1"
           [class.bg-light]="viewMode === 'list'"
           [class.primary-hover]="viewMode !== 'list'"
           (click)="setViewMode('list')">
           <i class="bi bi-list-ul"></i>
         </button>
-        <button 
-          class="btn btn-icon btn-sm" 
+        <button
+          class="btn btn-icon btn-sm"
           [class.bg-light]="viewMode === 'grid'"
           [class.primary-hover]="viewMode !== 'grid'"
           (click)="setViewMode('grid')">
           <i class="bi bi-grid"></i>
         </button>
-      </div>
-      
-      <!-- Sort Dropdown -->
-      <div class="dropdown position-relative">
-        <button 
-          class="btn btn-outline-light bg-white dropdown-toggle filter-date-general" 
-          type="button" 
-          (click)="toggleSortMenu()">
-          <i class="bi bi-sort-alpha-down me-2"></i>{{ getSortLabel() }}
-        </button>
-        <ul class="dropdown-menu p-3" [class.show]="showSortMenu" style="position: absolute; right: 0; top: 100%;">
-          <li>
-            <a href="javascript:void(0);" 
-               class="dropdown-item rounded-1" 
-               [class.active]="sortBy === 'name-asc'"
-               (click)="setSortBy('name-asc')">
-              A to Z
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0);" 
-               class="dropdown-item rounded-1" 
-               [class.active]="sortBy === 'name-desc'"
-               (click)="setSortBy('name-desc')">
-              Z to A
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0);" 
-               class="dropdown-item rounded-1" 
-               [class.active]="sortBy === 'recent-added'"
-               (click)="setSortBy('recent-added')">
-              Recently Added
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0);" 
-               class="dropdown-item rounded-1" 
-               [class.active]="sortBy === 'email-asc'"
-               (click)="setSortBy('email-asc')">
-              Sort by Email
-            </a>
-          </li>
-        </ul>
       </div>
     </div>
   </div>
@@ -95,7 +71,7 @@
   <!-- Grid View -->
   <div class="row" *ngIf="viewMode === 'grid' && !loading">
     
-    <div *ngFor="let parent of displayedParents" class="col-xl-4 col-md-6 d-flex">
+    <div *ngFor="let parent of displayedParents; trackBy: trackById" class="col-xl-4 col-md-6 d-flex">
       <div class="card flex-fill card-general mb-3">
         <div class="card-header d-flex align-items-center justify-content-between">
           <span class="badge" [class.bg-success]="parent.isActive" [class.bg-danger]="!parent.isActive">
@@ -154,15 +130,17 @@
         </div>
         <div class="card-footer d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center">
-            <span class="text-muted">children :  </span>
-            <img *ngIf="parent.children && parent.children.length > 0" 
-                 loading="lazy" [src]="parent.children[0].profilePicture || 'assets/child.png'" 
-                 class="rounded-circle me-2" 
-                 width="30" 
-                 height="30" 
-                 alt="Child">
+            <span class="text-muted me-1">Children :  </span>
+            <img *ngIf="parent.children && parent.children.length > 0"
+                 loading="lazy" [src]="parent.children[0].profilePicture || 'assets/child.png'"
+                 class="rounded-circle me-2"
+                 width="30"
+                 height="30"
+                 alt="Child"
+                 style="cursor: pointer;"
+                 (click)="viewChildDetails(parent.children[0].id); $event.stopPropagation()">
           </div>
-          <button class="btn btn-light btn-sm" (click)="viewDetails(parent)">View Details</button>
+          <button class="btn btn-light btn-sm btn-footer" (click)="viewDetails(parent)">View Details</button>
         </div>
       </div>
     </div>
@@ -174,60 +152,71 @@
 
   <!-- List View -->
   <div *ngIf="viewMode === 'list' && !loading">
-    <div class="card">
-      <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Photo</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let parent of displayedParents" (click)="viewDetails(parent)" style="cursor: pointer;">
-              <td>
-                <img loading="lazy" [src]="parent.profilePicture || (parent.gender?.toLowerCase() === 'female' ? 'assets/mother.png' : 'assets/father.png')" 
-                     class="rounded-circle" width="40" height="40" alt="Parent">
-              </td>
-              <td>
-                <strong>{{ parent.firstName }} {{ parent.lastName }}</strong>
-              </td>
-              <td>{{ parent.email }}</td>
-              <td>{{ parent.phoneNumber }}</td>
-              <td>{{ parent.address || 'N/A' }}</td>
-              <td>
-                <div class="d-flex gap-1" (click)="$event.stopPropagation()">
-                  <button class="btn btn-sm btn-outline-primary" (click)="viewDetails(parent)">
-                    <i class="bi bi-eye"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-warning" (click)="editParent(parent)">
-                    <i class="bi bi-pencil-square"></i>
-                  </button>
-                  <button 
-                    *ngIf="isAdmin" 
-                    class="btn btn-sm" 
-                    [class.btn-outline-warning]="parent.isActive" 
-                    [class.btn-outline-success]="!parent.isActive"
-                    (click)="toggleParentStatus(parent)">
-                    <i class="bi" [class.bi-pause-fill]="parent.isActive" [class.bi-play-fill]="!parent.isActive"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" (click)="deleteParent(parent.id!)">
-                    <i class="bi bi-trash3"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr *ngIf="displayedParents.length === 0">
-              <td colspan="6" class="text-center py-4">
-                No parents found
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="card flex-fill card-general card-recently mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h5>
+          <i class="bi bi-list-task"></i>
+          Parents List
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive custom-table">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let parent of displayedParents; trackBy: trackById" (click)="viewDetails(parent)" style="cursor: pointer;">
+                <td>
+                  <img loading="lazy" [src]="parent.profilePicture || (parent.gender?.toLowerCase() === 'female' ? 'assets/mother.png' : 'assets/father.png')" 
+                       class="rounded-circle" width="40" height="40" alt="Parent">
+                </td>
+                <td class="name-last">
+                  <span>{{ parent.firstName }} {{ parent.lastName }}</span>
+                </td>
+                <td>{{ parent.email }}</td>
+                <td>{{ parent.phoneNumber }}</td>
+                <td>{{ parent.address || 'N/A' }}</td>
+                <td>
+                  <div class="d-flex gap-1" (click)="$event.stopPropagation()">
+                    <button class="btn btn-sm btn-view" (click)="viewDetails(parent)">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-edit" (click)="editParent(parent)">
+                      <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button 
+                      *ngIf="isAdmin" 
+                      class="btn btn-sm btn-active" 
+                      [class.btn-]="parent.isActive" 
+                      [class.btn-]="!parent.isActive"
+                      (click)="toggleParentStatus(parent)">
+                      <i class="bi" [class.bi-pause-fill]="parent.isActive" [class.bi-play-fill]="!parent.isActive"></i>
+                    </button>
+                    <button class="btn btn-sm btn-remove" (click)="deleteParent(parent.id!)">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="displayedParents.length === 0">
+                <td colspan="6" class="text-center py-4">
+                  No parents found
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer d-flex align-items-center justify-content-between">
+        <span class="text-muted">Total: {{ displayedParents.length }} parent(s)</span>
       </div>
     </div>
   </div>
@@ -235,9 +224,9 @@
   <!-- Load More -->
   <div class="row" *ngIf="hasMoreItems && !loading">
     <div class="col-md-12">
-      <div class="load-more text-center mt-4">
-        <button class="btn btn-primary" (click)="loadMore()">
-          <i class="bi bi-plus-square me-2"></i> Load More
+      <div class="load-more text-center d-flex justify-content-center mt-4">
+        <button class="custom-btn-2 btn-add-border mb-4" (click)="loadMore()">
+          <i class="bi bi-plus-circle me-2"></i> Load More
         </button>
       </div>
     </div>

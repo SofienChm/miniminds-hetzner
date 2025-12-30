@@ -80,6 +80,18 @@
           </div>
           <span>Activities</span>
         </div>
+        <div class="menu-item" (click)="navigateTo('/gallery')">
+          <div class="icon-circle gallery">
+            <i class="bi bi-images"></i>
+          </div>
+          <span>Gallery</span>
+        </div>
+        <div class="menu-item" (click)="navigateTo('/food-menu/parent')">
+          <div class="icon-circle food">
+            <i class="bi bi-fork-knife"></i>
+          </div>
+          <span>Food </span>
+        </div>
       </div>
       
       <div class="logout-item" (click)="logout()">

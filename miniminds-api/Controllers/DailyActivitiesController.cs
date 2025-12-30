@@ -56,12 +56,18 @@ namespace DaycareAPI.Controllers
 
             if (activity == null)
                 return NotFound();
-                
+
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
             if (userRole == "Parent")
             {
                 var parentIdClaim = User.FindFirst("ParentId")?.Value;
-                if (int.TryParse(parentIdClaim, out int parentId) && activity.Child.ParentId != parentId)
+                if (!int.TryParse(parentIdClaim, out int parentId))
+                {
+                    return Forbid();
+                }
+
+                // Verify the activity's child belongs to this parent
+                if (activity.Child == null || activity.Child.ParentId != parentId)
                 {
                     return Forbid();
                 }

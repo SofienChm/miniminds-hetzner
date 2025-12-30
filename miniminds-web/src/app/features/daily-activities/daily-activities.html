@@ -1,6 +1,6 @@
 <div *ngIf="isParent">
   <app-parent-child-header
-    title="Daily Report"
+    [title]="'DAILY_REPORT.TITLE' | translate"
     [children]="children"
     [currentChildIndex]="currentChildIndex"
     [selectedDate]="selectedDate"
@@ -12,11 +12,11 @@
 </div>
 
 <div [class]="isParent ? '' : 'container-fluid mt-4'">
-  <app-title-page *ngIf="!isParent" 
-    title="Daily Report" 
-    subtitle="Track and manage children's daily activities"
+  <app-title-page *ngIf="!isParent"
+    [title]="'DAILY_REPORT.TITLE' | translate"
+    [subtitle]="'DAILY_REPORT.SUBTITLE' | translate"
     icon="bi bi-clipboard-data"
-    [breadcrumbs]="[{label: 'Dashboard', url: '/dashboard'}, {label: 'Daily Report'}]">
+    [breadcrumbs]="[{label: 'BREADCRUMBS.DASHBOARD' | translate, url: '/dashboard'}, {label: 'DAILY_REPORT.TITLE' | translate}]">
   </app-title-page>
 </div>
 
@@ -26,19 +26,21 @@
 <div class="container-fluid" *ngIf="isParent">
 
   <div class="activities-container">
-    <h2 *ngIf="children.length > 1">Today's Activities - {{ getSelectedChildName() }} 
+    <h2 *ngIf="children.length > 1">{{ 'DAILY_REPORT.TODAYS_ACTIVITIES' | translate }} - {{ getSelectedChildName() }}
       <span *ngIf="loading" class="spinner-border spinner-border-sm ms-2" role="status"></span>
     </h2>
     <div *ngIf="!loading && activities.length === 0" class="text-center py-4 text-muted">
       <i class="bi bi-calendar-x fs-1 mb-2"></i>
-      <p>No activities recorded for today</p>
+      <p>{{ 'DAILY_REPORT.NO_ACTIVITIES_TODAY' | translate }}</p>
     </div>
     <div *ngIf="activities.length > 0" class="mb-5 container-fluid" [style.opacity]="loading ? '0.5' : '1'">
       <div class="activity-row row" *ngFor="let activityGroup of getActivityRows(); let i = index">
-        <div class="activity-card col-6" 
-            *ngFor="let activity of activityGroup" 
+        <div class="activity-card col-6"
+            *ngFor="let activity of activityGroup"
             [class]="activity.activityType.toLowerCase()"
-            [class.single-activity]="activityGroup.length === 1">
+            [class.single-activity]="activityGroup.length === 1"
+            [routerLink]="['/activities/detail', activity.id]"
+            style="cursor: pointer;">
           <div class="activity-time">{{ activity.activityTime | date:'shortTime' }}</div>
           <div class="activity-title">{{ activity.activityType }}</div>
           <div class="activity-icons">{{ getActivityIcon(activity.activityType) }}</div>
@@ -52,61 +54,57 @@
 <div class="container-fluid" *ngIf="!isParent">
   <div class="row mb-4">
     <div class="col-xl-8 first-dashbord-card">
-      <div class="row">
+      <div class="row g-2">
         <div class="col-xl-3">
-          <div class="card children">
-            <div class="card-body">
-              <div class="percentage">
-                <div class="text-success">+12%</div>
-                <i class="bi bi-egg-fried"></i>
-              </div>
-              <div class="nbr">{{ getActivityCount('Meal') + getActivityCount('Snack') }}</div>
-              <div class="title-item">Meals & Snacks</div>
+          <div class="card card-body stats-card present">
+            <div class="stats-icon mb-2">
+              <i class="bi bi-egg-fried"></i>
+            </div>
+            <div class="stats-content">
+              <h3>{{ getActivityCount('Meal') + getActivityCount('Snack') }}</h3>
+              <p>{{ 'DAILY_REPORT.MEALS_SNACKS' | translate }}</p>
             </div>
           </div>
         </div>
         <div class="col-xl-3">
-          <div class="card event">
-            <div class="card-body">
-              <div class="percentage">
-                <div class="text-success">+8%</div>
-                <i class="bi bi-moon-stars"></i>
-              </div>
-              <div class="nbr">{{ getActivityCount('Nap') }}</div>
-              <div class="title-item">Nap Times</div>
+          <div class="card card-body stats-card present">
+            <div class="stats-icon mb-2">
+              <i class="bi bi-moon-stars"></i>
+            </div>
+            <div class="stats-content">
+              <h3>{{ getActivityCount('Nap') }}</h3>
+              <p>{{ 'DAILY_REPORT.NAP_TIMES' | translate }}</p>
             </div>
           </div>
         </div>
         <div class="col-xl-3">
-          <div class="card fee">
-            <div class="card-body">
-              <div class="percentage">
-                <div class="text-success">+15%</div>
-                <i class="bi bi-controller"></i>
-              </div>
-              <div class="nbr">{{ getActivityCount('Play') + getActivityCount('Learning') }}</div>
-              <div class="title-item">Activities</div>
+          <div class="card card-body stats-card present">
+            <div class="stats-icon mb-2">
+              <i class="bi bi-controller"></i>
+            </div>
+            <div class="stats-content">
+              <h3>{{ getActivityCount('Play') + getActivityCount('Learning') }}</h3>
+              <p>{{ 'DAILY_REPORT.ACTIVITIES' | translate }}</p>
             </div>
           </div>
         </div>
         <div class="col-xl-3">
-          <div class="card children">
-            <div class="card-body">
-              <div class="percentage">
-                <div class="text-success">{{ activities.length > 0 ? '+' : '' }}{{ activities.length > 10 ? '20' : '5' }}%</div>
-                <i class="bi bi-list-check"></i>
-              </div>
-              <div class="nbr">{{ activities.length }}</div>
-              <div class="title-item">Total Activities</div>
+          <div class="card card-body stats-card present">
+            <div class="stats-icon mb-2">
+              <i class="bi bi-controller"></i>
+            </div>
+            <div class="stats-content">
+              <h3>{{ activities.length }}</h3>
+              <p>{{ 'DAILY_REPORT.TOTAL_ACTIVITIES' | translate }}</p>
             </div>
           </div>
         </div>
         
         <!-- Charts Row -->
-        <div class="col-xl-6 mt-4">
-          <div class="card card-dashbord-all">
+        <div class="col-xl-6 mt-3">
+          <div class="card card-dashbord-all card-general">
             <div class="card-header">
-              <h5 class="mb-0"><i class="bi bi-pie-chart"></i>Activity Distribution</h5>
+              <h5 class="mb-0"><i class="bi bi-pie-chart"></i>{{ 'DAILY_REPORT.ACTIVITY_DISTRIBUTION' | translate }}</h5>
             </div>
             <div class="card-body">
               <div class="chart-container text-center" style="height: 200px; width: 200px; margin: 0 auto;">
@@ -115,11 +113,11 @@
             </div>
           </div>
         </div>
-        
-        <div class="col-xl-6 mt-4">
-          <div class="card card-dashbord-all">
+
+        <div class="col-xl-6 mt-3">
+          <div class="card card-dashbord-all card-general">
             <div class="card-header">
-              <h5 class="mb-0"><i class="bi bi-graph-up"></i>Daily Timeline</h5>
+              <h5 class="mb-0"><i class="bi bi-graph-up"></i>{{ 'DAILY_REPORT.DAILY_TIMELINE' | translate }}</h5>
             </div>
             <div class="card-body">
               <div style="position: relative; height: 200px;">
@@ -133,30 +131,40 @@
     
     <!-- Filters & Controls -->
     <div class="col-xl-4">
-      <div class="card card-dashbord-all mb-3">
+      <div class="card card-dashbord-all card-general mb-3">
         <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-funnel"></i>Filters & Controls</h5>
+          <h5 class="mb-0"><i class="bi bi-funnel-fill"></i>{{ 'DAILY_REPORT.FILTERS_CONTROLS' | translate }}</h5>
         </div>
         <div class="card-body">
           <div class="mb-3">
-            <label class="form-label">Date</label>
+            <label class="form-label">{{ 'DAILY_REPORT.DATE' | translate }}</label>
             <input type="date" class="form-control" [(ngModel)]="selectedDate" (change)="onDateChange()">
           </div>
           <div class="mb-3">
-            <label class="form-label">Child</label>
-            <select class="form-select" [(ngModel)]="selectedChildId" (change)="onChildChange()">
-              <option [value]="null">All Children ({{ children.length }})</option>
-              <option *ngFor="let child of children" [value]="child.id">
-                {{ child.firstName }} {{ child.lastName }}
-              </option>
-            </select>
+            <label class="form-label">{{ 'DAILY_REPORT.CHILD' | translate }}</label>
+            <ng-select
+              [items]="children"
+              bindLabel="firstName"
+              bindValue="id"
+              [(ngModel)]="selectedChildId"
+              (change)="onChildChange()"
+              [clearable]="true"
+              [searchable]="true"
+              [placeholder]="('DAILY_REPORT.ALL_CHILDREN' | translate) + ' (' + children.length + ')'">
+              <ng-template ng-label-tmp let-item="item">
+                {{ item.firstName }} {{ item.lastName }}
+              </ng-template>
+              <ng-template ng-option-tmp let-item="item">
+                {{ item.firstName }} {{ item.lastName }}
+              </ng-template>
+            </ng-select>
           </div>
           <div class="d-grid gap-2" *ngIf="canEdit()">
-            <button class="btn btn-outline-primary" (click)="showBulkAdd = true">
-              <i class="bi bi-plus-circle me-2"></i>Add Activity
+            <button class="btn btn-add-global-2 add" (click)="showBulkAdd = true">
+              <i class="bi bi-plus-circle me-2"></i>{{ 'DAILY_REPORT.ADD_ACTIVITY' | translate }}
             </button>
-            <button class="btn btn-outline-success" (click)="exportReport()">
-              <i class="bi bi-download me-2"></i>Export Report
+            <button class="btn btn-add-global-2 export" (click)="exportReport()">
+              <i class="bi bi-download me-2"></i>{{ 'DAILY_REPORT.EXPORT_REPORT' | translate }}
             </button>
           </div>
         </div>
@@ -165,8 +173,8 @@
   </div>
 
   <!-- View Controls -->
-  <div class="bg-white p-3 border rounded-1 d-flex align-items-center justify-content-between flex-wrap mb-4">
-    <h4 class="title-filter">Activity Timeline</h4>
+  <div class="bg-white p-3 border rounded-1 d-flex align-items-center justify-content-between flex-wrap">
+    <h4 class="title-filter">{{ 'DAILY_REPORT.ACTIVITY_TIMELINE' | translate }}</h4>
     <div class="d-flex align-items-center flex-wrap gap-2">
       <!-- View Toggle -->
       <div class="d-flex align-items-center bg-white border rounded-2 p-1 me-2">
@@ -189,9 +197,9 @@
   </div>
 
   <!-- Loading -->
-  <div *ngIf="loading" class="text-center py-5">
+  <div *ngIf="loading" class="text-center py-3">
     <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
+      <span class="visually-hidden">{{ 'DAILY_REPORT.LOADING' | translate }}</span>
     </div>
   </div>
 
@@ -199,20 +207,20 @@
   <div *ngIf="!loading && viewMode === 'timeline' && activities.length > 0">
     <div *ngFor="let period of ['Morning', 'Afternoon', 'Evening']" class="mb-4">
       <div *ngIf="getTimelineGroups()[period] && getTimelineGroups()[period]!.length > 0">
-        <div class="card card-dashbord-all">
+        <div class="card card-dashbord-all card-general">
           <div class="card-header">
             <h5 class="mb-0">
-              <i class="bi" [class.bi-sun]="period === 'Morning'" 
-                 [class.bi-cloud-sun]="period === 'Afternoon'"
+              <i class="bi" [class.bi-sun]="period === 'Morning'"
+                 [class.bi-cloud-sun-fill]="period === 'Afternoon'"
                  [class.bi-moon-stars]="period === 'Evening'"></i>
-              {{ period }} Activities
+              {{ 'DAILY_REPORT.TIME_PERIODS.' + period.toUpperCase() | translate }} {{ 'DAILY_REPORT.ACTIVITIES' | translate }}
               <span class="badge bg-primary ms-2">{{ getTimelineGroups()[period]!.length }}</span>
             </h5>
           </div>
           <div class="card-body">
             <div class="row">
               <div *ngFor="let activity of getTimelineGroups()[period]!" class="col-md-6 col-lg-4 mb-3">
-                <div class="card h-100 border activity-card-item">
+                <div class="card h-100 border activity-card-item clickable-card" [routerLink]="['/activities/detail', activity.id]" style="cursor: pointer;">
                   <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                       <div class="d-flex align-items-center">
@@ -224,33 +232,33 @@
                           <small class="text-muted">{{ activity.activityTime | date:'shortTime' }}</small>
                         </div>
                       </div>
-                      <div class="dropdown" *ngIf="canEdit()">
+                      <div class="dropdown" *ngIf="canEdit()" (click)="$event.stopPropagation()">
                         <button class="btn btn-sm btn-outline-light" data-bs-toggle="dropdown">
                           <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                          <li><a class="dropdown-item" href="javascript:void(0);" (click)="editActivity(activity)"><i class="bi bi-pencil me-2"></i>Edit</a></li>
-                          <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="deleteActivity(activity.id!)"><i class="bi bi-trash me-2"></i>Delete</a></li>
+                          <li><a class="dropdown-item" href="javascript:void(0);" (click)="editActivity(activity)"><i class="bi bi-pencil me-2"></i>{{ 'DAILY_REPORT.EDIT' | translate }}</a></li>
+                          <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="deleteActivity(activity.id!)"><i class="bi bi-trash me-2"></i>{{ 'DAILY_REPORT.DELETE' | translate }}</a></li>
                         </ul>
                       </div>
                     </div>
-                    
+
                     <div *ngIf="!selectedChildId && activity.child" class="mb-2">
-                      <small class="text-muted">Child: {{ activity.child.firstName }} {{ activity.child.lastName }}</small>
+                      <small class="text-muted">{{ 'DAILY_REPORT.CHILD' | translate }}: {{ activity.child.firstName }} {{ activity.child.lastName }}</small>
                     </div>
-                    
+
                     <div *ngIf="activity.duration" class="mb-1">
-                      <small><i class="bi bi-clock me-1"></i>{{ activity.duration }} minutes</small>
+                      <small><i class="bi bi-clock me-1"></i>{{ activity.duration }} {{ 'DAILY_REPORT.MINUTES' | translate }}</small>
                     </div>
-                    
+
                     <div *ngIf="activity.foodItem" class="mb-1">
                       <small><i class="bi bi-egg-fried me-1"></i>{{ activity.foodItem }}</small>
                     </div>
-                    
+
                     <div *ngIf="activity.mood" class="mb-1">
                       <small><i class="bi bi-emoji-smile me-1"></i>{{ activity.mood }}</small>
                     </div>
-                    
+
                     <div *ngIf="activity.notes" class="mt-2">
                       <small class="text-muted">{{ activity.notes }}</small>
                     </div>
@@ -266,26 +274,26 @@
 
   <!-- Grid View -->
   <div *ngIf="!loading && viewMode === 'grid' && activities.length > 0">
-    <div class="card card-dashbord-all">
+    <div class="card card-dashbord-all card-general">
       <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-grid me-2"></i>All Activities</h5>
+        <h5 class="mb-0"><i class="bi bi-grid me-2"></i>{{ 'DAILY_REPORT.ALL_ACTIVITIES' | translate }}</h5>
       </div>
       <div class="card-body">
         <div class="row">
           <div *ngFor="let activity of activities" class="col-xl-3 col-md-4 col-sm-6 mb-3">
-            <div class="card h-100 border activity-grid-item">
+            <div class="card h-100 border activity-grid-item clickable-card" [routerLink]="['/activities/detail', activity.id]" style="cursor: pointer;">
               <div class="card-body text-center">
                 <div class="activity-icon-large mb-3" [class]="activity.activityType.toLowerCase()">
                   <i class="bi {{ getTemplate(activity.activityType).icon }}"></i>
                 </div>
                 <h6 class="mb-1">{{ activity.activityType }}</h6>
                 <small class="text-muted d-block mb-2">{{ activity.activityTime | date:'shortTime' }}</small>
-                
+
                 <div *ngIf="!selectedChildId && activity.child" class="mb-2">
                   <small class="badge bg-light text-dark">{{ activity.child.firstName }}</small>
                 </div>
-                
-                <div class="d-flex justify-content-center gap-1" *ngIf="canEdit()">
+
+                <div class="d-flex justify-content-center gap-1" *ngIf="canEdit()" (click)="$event.stopPropagation()">
                   <button class="btn btn-sm btn-outline-primary" (click)="editActivity(activity)">
                     <i class="bi bi-pencil"></i>
                   </button>
@@ -302,15 +310,17 @@
   </div>
 
   <!-- Empty State -->
-  <div *ngIf="!loading && activities.length === 0" class="text-center py-5">
-    <div class="card card-dashbord-all">
+  <div *ngIf="!loading && activities.length === 0" class="text-center py-4">
+    <div class="card card-dashbord-all card-general">
       <div class="card-body py-5">
         <i class="bi bi-clipboard-data icon-4x text-muted mb-3 opacity-25"></i>
-        <h5 class="text-muted">No activities recorded for {{ selectedDate | date:'mediumDate' }}</h5>
-        <p class="text-muted">Start tracking daily activities</p>
-        <button *ngIf="canEdit()" class="btn btn-primary" (click)="showBulkAdd = true">
-          <i class="bi bi-plus-circle me-2"></i>Add First Activity
-        </button>
+        <h5 class="text-muted">{{ 'DAILY_REPORT.NO_ACTIVITIES_FOR_DATE' | translate }} {{ selectedDate | date:'mediumDate' }}</h5>
+        <p class="text-muted">{{ 'DAILY_REPORT.START_TRACKING' | translate }}</p>
+        <div class="d-flex justify-content-center">
+          <button *ngIf="canEdit()" class="btn custom-btn-2 btn-add-global-2 s" (click)="showBulkAdd = true">
+            <i class="bi bi-plus-circle me-2"></i>{{ 'DAILY_REPORT.ADD_FIRST_ACTIVITY' | translate }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -322,14 +332,14 @@
         <div class="modal-header">
           <h5 class="modal-title">
             <i class="bi bi-plus-circle me-2"></i>
-            Add Daily Activity
+            {{ 'DAILY_REPORT.ADD_DAILY_ACTIVITY' | translate }}
           </h5>
           <button type="button" class="btn-close" (click)="showBulkAdd = false"></button>
         </div>
         <div class="modal-body">
           <!-- Activity Templates -->
           <div class="mb-4">
-            <label class="form-label fw-bold">Select Activity Type</label>
+            <label class="form-label fw-bold">{{ 'DAILY_REPORT.SELECT_ACTIVITY_TYPE' | translate }}</label>
             <div class="row g-2">
               <div *ngFor="let template of activityTemplates" class="col-md-3 col-sm-4 col-6">
                 <div class="activity-template-card" 
@@ -348,33 +358,33 @@
           <div *ngIf="newActivity.activityType">
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label">Time</label>
+                <label class="form-label">{{ 'DAILY_REPORT.TIME' | translate }}</label>
                 <input type="datetime-local" class="form-control" [(ngModel)]="newActivity.activityTime">
               </div>
               <div class="col-md-6" *ngIf="getTemplate(newActivity.activityType).defaultDuration">
-                <label class="form-label">Duration (minutes)</label>
+                <label class="form-label">{{ 'DAILY_REPORT.DURATION_MINUTES' | translate }}</label>
                 <input type="number" class="form-control" [(ngModel)]="newActivity.duration" placeholder="30">
               </div>
             </div>
 
             <div class="row g-3 mt-2" *ngIf="getTemplate(newActivity.activityType).requiresFood">
               <div class="col-12">
-                <label class="form-label">Food/Drink</label>
-                <input type="text" class="form-control" [(ngModel)]="newActivity.foodItem" 
-                       placeholder="e.g., Apple slices, Milk">
+                <label class="form-label">{{ 'DAILY_REPORT.FOOD_DRINK' | translate }}</label>
+                <input type="text" class="form-control" [(ngModel)]="newActivity.foodItem"
+                       [placeholder]="'DAILY_REPORT.FOOD_PLACEHOLDER' | translate">
               </div>
             </div>
 
             <div class="row g-3 mt-2">
               <div class="col-12">
-                <label class="form-label">Mood</label>
+                <label class="form-label">{{ 'DAILY_REPORT.MOOD' | translate }}</label>
                 <div class="mood-buttons">
-                  <button *ngFor="let mood of moods" 
+                  <button *ngFor="let mood of moods"
                           type="button"
-                          class="btn btn-outline-secondary btn-sm me-2 mb-2" 
+                          class="btn btn-outline-secondary btn-sm me-2 mb-2"
                           [class.active]="newActivity.mood === mood"
                           (click)="newActivity.mood = mood">
-                    {{ mood }}
+                    {{ 'DAILY_REPORT.MOODS.' + mood.toUpperCase() | translate }}
                   </button>
                 </div>
               </div>
@@ -382,17 +392,17 @@
 
             <div class="row g-3 mt-2">
               <div class="col-12">
-                <label class="form-label">Notes</label>
-                <textarea class="form-control" rows="3" [(ngModel)]="newActivity.notes" 
-                          placeholder="Additional notes..."></textarea>
+                <label class="form-label">{{ 'DAILY_REPORT.NOTES' | translate }}</label>
+                <textarea class="form-control" rows="3" [(ngModel)]="newActivity.notes"
+                          [placeholder]="'DAILY_REPORT.ADDITIONAL_NOTES' | translate"></textarea>
               </div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="showBulkAdd = false">Cancel</button>
-          <button type="button" class="btn btn-primary" (click)="saveActivity()" [disabled]="!newActivity.activityType">
-            <i class="bi bi-check-circle me-2"></i>Save Activity
+          <button type="button" class="btn btn-secondary" (click)="showBulkAdd = false">{{ 'DAILY_REPORT.CANCEL' | translate }}</button>
+          <button type="button" class="btn custom-btn-2 btn-add-global-2" (click)="saveActivity()" [disabled]="!newActivity.activityType">
+            <i class="bi bi-check-circle me-2"></i>{{ 'DAILY_REPORT.SAVE_ACTIVITY' | translate }}
           </button>
         </div>
       </div>

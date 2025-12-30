@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { HolidayService } from '../holiday.service';
 import { Holiday } from '../holiday.interface';
 import { TitlePage } from '../../../shared/layouts/title-page/title-page';
@@ -9,7 +10,7 @@ import { TitlePage } from '../../../shared/layouts/title-page/title-page';
 @Component({
   selector: 'app-edit-holiday',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TitlePage],
+  imports: [CommonModule, ReactiveFormsModule, TitlePage, TranslateModule],
   templateUrl: './edit-holiday.component.html',
   styleUrls: ['./edit-holiday.component.scss']
 })

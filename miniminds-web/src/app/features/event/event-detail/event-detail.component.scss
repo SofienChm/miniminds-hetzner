@@ -3,6 +3,126 @@ $primary-color: #202c4b;
 $secondary-color: #feccfd;
 $accent-color: #cdeaf0;
 
+// newGlobal Card Styles
+.participants-card {
+  .card-header {
+    h5{
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin: 0;    
+      display: flex;
+      align-items: center;
+      i{
+        font-size: 24px;
+        color: #7dd3c0;
+        margin-right: 12px;
+      }
+    }
+  }
+}
+.card-general {
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  .event-header {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+    .event-image-container {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #d4f4dd 0%, #c8e6c9 100%);
+      .event-badge {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        background: #7dbcf9;
+        color: white;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .change-image-btn {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        border: none;
+        font-size: 14px;
+        color: #4f46e5;
+        cursor: pointer;
+      }
+    }
+  }
+}
+.stat-card {
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+      &.price {
+        background: #dbeafe;
+        color: #2563eb;
+      }
+      &.capacity {
+        background: #fce7f3;
+        color: #db2777;
+      }
+      &.age {
+        background: #d8f2ed;
+        color: #7cd1c0;
+    }
+  }
+}
+.hover-shadow {
+  .bg-success {
+    background-color: #7cd1c0 !important;
+  }
+}
+// Progress Bar
+.event-progress {
+  border-radius: 10px;
+  background-color: rgba(205, 234, 240, 0.3);
+}
+
+.event-progress-bar {
+  border-radius: 10px;
+  font-weight: 600;
+  background: linear-gradient(135deg,#7db9ff 0%,#7dd3c0 100%)  !important;
+}
+
+.add-participant {
+  background: #7db9ff;
+  border: none;
+  font-weight: 400;
+  color: white;
+  font-size: 14px;
+  padding: 9px 15px;
+}
+
+
+.detail-icon {
+  color: #ffffff;
+  background: #7cd1c0;
+  padding: 10px;
+  border-radius: 50px;
+  line-height: 1;
+}
+// end newGlobal Card Styles
+
 .card {
   transition: all 0.3s ease;
   border: 1px solid rgba(32, 44, 75, 0.1);
@@ -21,12 +141,6 @@ $accent-color: #cdeaf0;
   }
 }
 
-.event-badge {
-  background-color: $secondary-color !important;
-  color: #202c4b !important;
-  font-weight: 600;
-  font-size: 0.85rem;
-}
 
 // Event Stats Cards
 .event-stat-card {
@@ -47,6 +161,7 @@ $accent-color: #cdeaf0;
 
 .stat-icon {
   color: #202c4b;
+  line-height: 1;
 }
 
 // Parent View Styles
@@ -128,36 +243,14 @@ $accent-color: #cdeaf0;
   font-weight: 500;
 }
 
-// Participants Card
 
-
-// Event Details Card
-
-
-.detail-icon {
-  color: #202c4b;
-}
 
 .revenue-text {
   color: #202c4b !important;
 }
 
-// Progress Bar
-.event-progress {
-  border-radius: 10px;
-  background-color: rgba(205, 234, 240, 0.3);
-}
 
-.event-progress-bar {
-  border-radius: 10px;
-  font-weight: 600;
-  background-color: #202c4b !important;
-}
 
-.badge {
-  font-weight: 500;
-  font-size: 0.85rem;
-}
 
 .rounded-circle {
   border: 2px solid #fff;
