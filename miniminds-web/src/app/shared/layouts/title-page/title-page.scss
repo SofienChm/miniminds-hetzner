@@ -2,7 +2,6 @@
   margin-bottom: 1.5rem;
 }
 
-
 .breadcrumbs ol {
   display: flex;
   align-items: center;
@@ -77,7 +76,7 @@
 .page-title {
   font-size: 22px;
   font-weight: 700;
-  color: #111827;
+  color: var(--primary-color);
   margin: 0;
   line-height: 1.2;
 }
@@ -108,9 +107,6 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
-  background-color: #506EE4 !important;
-  border: 1px solid #506EE4 !important;
-  color: #FFF !important;
   &.btn-cancel-global{
     background-color: #E9EDF4 !important;
     background: #E9EDF4 !important;
@@ -121,18 +117,6 @@
     font-weight: 500;
     color: #202C4B !important;
   }
-  &.btn-update-overdue{
-    background-color: #feccfd !important;
-    background: #feccfd !important;
-    border-color: #feccfd !important;
-    color: #202C4B !important;
-  }
-  &.btn-bulk-monthly-fee{
-    background-color: #cdeaf0 !important;
-    background: #cdeaf0 !important;
-    border-color: #cdeaf0 !important;
-    color: #202C4B !important;
-  }
 }
 
 .action-btn i {
@@ -140,38 +124,6 @@
 }
 
 /* Button Variants */
-.btn-primary {
-  background: #506EE4;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
-}
-
-.btn-secondary {
-  background: #6b7280;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #4b5563;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(107, 114, 128, 0.3);
-}
-
-.btn-success {
-  background: #10b981;
-  color: white;
-}
-
-.btn-success:hover {
-  background: #059669;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
-}
 
 .btn-danger {
   background: #ef4444;
@@ -268,6 +220,7 @@
   background-color: #E9EDF4 !important;
   border: 1px solid #E9EDF4 !important;
   color: #515B73 !important;
+  box-shadow: 0 4px 15px rgba(161, 161, 161, 0.4) !important;
 }
 
 /* Parent Layout Styles */

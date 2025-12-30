@@ -16,11 +16,19 @@ namespace DaycareAPI.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IPushNotificationService _pushNotificationService;
+        private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
+        public NotificationService(
+            ApplicationDbContext context,
+            IHubContext<NotificationHub> hubContext,
+            IPushNotificationService pushNotificationService,
+            ILogger<NotificationService> logger)
         {
             _context = context;
             _hubContext = hubContext;
+            _pushNotificationService = pushNotificationService;
+            _logger = logger;
         }
 
         public async Task SendEventNotificationToParentsAsync(Event eventItem)
@@ -72,10 +80,10 @@ namespace DaycareAPI.Services
 
                 _context.Notifications.Add(notification);
                 await _context.SaveChangesAsync();
-                
-                Console.WriteLine($"Notification saved to DB for user {userId}: {title}");
 
-                // Send real-time notification via SignalR
+                _logger.LogInformation($"Notification saved to DB for user {userId}: {title}");
+
+                // Send real-time notification via SignalR (for when app is open)
                 await _hubContext.Clients.Group($"User_{userId}").SendAsync("ReceiveNotification", new
                 {
                     id = notification.Id,
@@ -87,12 +95,31 @@ namespace DaycareAPI.Services
                     isRead = notification.IsRead,
                     createdAt = notification.CreatedAt
                 });
-                
-                Console.WriteLine($"SignalR notification sent to User_{userId}");
+
+                _logger.LogInformation($"SignalR notification sent to User_{userId}");
+
+                // Send FCM push notification (for when app is closed/backgrounded)
+                var pushData = new Dictionary<string, string>
+                {
+                    { "notificationId", notification.Id.ToString() },
+                    { "type", type },
+                    { "redirectUrl", redirectUrl ?? "" }
+                };
+
+                var pushSent = await _pushNotificationService.SendPushNotificationAsync(userId, title, message, pushData);
+
+                if (pushSent)
+                {
+                    _logger.LogInformation($"FCM push notification sent to user {userId}");
+                }
+                else
+                {
+                    _logger.LogInformation($"FCM push notification not sent to user {userId} (no active device tokens or Firebase not configured)");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error sending notification: {ex.Message}");
+                _logger.LogError(ex, $"Error sending notification to user {userId}");
             }
         }
     }

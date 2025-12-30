@@ -1,36 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TitlePage, Breadcrumb } from '../../shared/layouts/title-page/title-page';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { TitlePage, Breadcrumb, TitleAction } from '../../shared/layouts/title-page/title-page';
 import { AuthService } from '../../core/services/auth';
 import { LeavesService, CreateLeaveRequestDto } from './leaves.service';
 import { EducatorService } from '../educator/educator.service';
 import { EducatorModel } from '../educator/educator.interface';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-add-leave',
   standalone: true,
-  imports: [CommonModule, FormsModule, TitlePage],
+  imports: [CommonModule, FormsModule, TitlePage, NgSelectModule, TranslateModule],
   templateUrl: './add-leave.html',
   styleUrls: ['./add-leave.scss']
 })
-export class AddLeave implements OnInit {
+export class AddLeave implements OnInit, OnDestroy {
   isAdmin = false;
   isTeacher = false;
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard', url: '/dashboard' },
-    { label: 'Leaves', url: '/leaves' },
-    { label: 'Add' }
-  ];
-  actions = [
-    {
-      label: 'Back to leaves',
-      icon: 'bi bi-arrow-left',
-      class: 'btn-cancel-global',
-      action: () => this.cancel()
-    }
-  ];
+  breadcrumbs: Breadcrumb[] = [];
+  actions: TitleAction[] = [];
+  private langChangeSub?: Subscription;
+
+  // Leave type options for ng-select
+  leaveTypeOptions: { value: string; label: string }[] = [];
 
   // Teacher form
   newLeave: CreateLeaveRequestDto = { startDate: '', endDate: '', reason: '', leaveType: 'Annual' };
@@ -49,7 +46,9 @@ export class AddLeave implements OnInit {
     private authService: AuthService,
     private leavesService: LeavesService,
     private educatorService: EducatorService,
-    private router: Router
+    private router: Router,
+    private translateService: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   cancel(): void {
@@ -57,11 +56,46 @@ export class AddLeave implements OnInit {
   }
 
   ngOnInit(): void {
+    this.pageTitleService.setTitle(this.translateService.instant('LEAVES_PAGE.ADD_LEAVE'));
     this.isAdmin = this.authService.isAdmin();
     this.isTeacher = this.authService.isTeacher();
     if (this.isAdmin) {
       this.loadTeachers();
     }
+
+    this.updateTranslatedContent();
+
+    this.langChangeSub = this.translateService.onLangChange.subscribe(() => {
+      this.updateTranslatedContent();
+      this.pageTitleService.setTitle(this.translateService.instant('LEAVES_PAGE.ADD_LEAVE'));
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
+  }
+
+  updateTranslatedContent(): void {
+    this.breadcrumbs = [
+      { label: this.translateService.instant('LEAVES_PAGE.DASHBOARD'), url: '/dashboard' },
+      { label: this.translateService.instant('LEAVES_PAGE.LEAVES'), url: '/leaves' },
+      { label: this.translateService.instant('LEAVES_PAGE.ADD') }
+    ];
+
+    this.actions = [
+      {
+        label: this.translateService.instant('LEAVES_PAGE.BACK_TO_LEAVES'),
+        icon: 'bi bi-arrow-left',
+        class: 'btn-cancel-global',
+        action: () => this.cancel()
+      }
+    ];
+
+    this.leaveTypeOptions = [
+      { value: 'Annual', label: this.translateService.instant('LEAVES_PAGE.ANNUAL_LEAVE') },
+      { value: 'Medical', label: this.translateService.instant('LEAVES_PAGE.MEDICAL_LEAVE') },
+      { value: 'Emergency', label: this.translateService.instant('LEAVES_PAGE.EMERGENCY_LEAVE') }
+    ];
   }
 
   loadTeachers(): void {
@@ -76,7 +110,7 @@ export class AddLeave implements OnInit {
     this.submitting = true;
     const { startDate, endDate, reason } = this.newLeave;
     if (!startDate || !endDate) {
-      this.errorMessage = 'Start and end dates are required';
+      this.errorMessage = this.translateService.instant('LEAVES_PAGE.DATES_REQUIRED');
       this.submitting = false;
       return;
     }
@@ -86,7 +120,7 @@ export class AddLeave implements OnInit {
         this.router.navigate(['/leaves']);
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || 'Failed to submit leave request';
+        this.errorMessage = err.error?.message || this.translateService.instant('LEAVES_PAGE.FAILED_SUBMIT_REQUEST');
         this.submitting = false;
       }
     });
@@ -98,12 +132,12 @@ export class AddLeave implements OnInit {
     const tid = this.adminSelectedTeacherId;
     const { startDate, endDate, reason } = this.adminNewLeave;
     if (!tid) {
-      this.adminError = 'Please select a teacher';
+      this.adminError = this.translateService.instant('LEAVES_PAGE.PLEASE_SELECT_TEACHER');
       this.adminSubmitting = false;
       return;
     }
     if (!startDate || !endDate) {
-      this.adminError = 'Start and end dates are required';
+      this.adminError = this.translateService.instant('LEAVES_PAGE.DATES_REQUIRED');
       this.adminSubmitting = false;
       return;
     }
@@ -113,7 +147,7 @@ export class AddLeave implements OnInit {
         this.router.navigate(['/leaves']);
       },
       error: (err) => {
-        this.adminError = err.error?.message || 'Failed to create leave';
+        this.adminError = err.error?.message || this.translateService.instant('LEAVES_PAGE.FAILED_CREATE_LEAVE');
         this.adminSubmitting = false;
       }
     });

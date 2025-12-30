@@ -1,220 +1,375 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { EventModel } from '../event.interface';
 import { EventService } from '../event.service';
-import { TitlePage, Breadcrumb } from '../../../shared/layouts/title-page/title-page';
-import { ConfirmationModal } from '../../../shared/components/confirmation-modal/confirmation-modal';
+import { Breadcrumb } from '../../../shared/layouts/title-page/title-page';
+import { PageTitleService } from '../../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-edit-event',
-  imports: [CommonModule, FormsModule, TitlePage, ConfirmationModal],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, NgSelectModule],
   standalone: true,
   templateUrl: './edit-event.html',
   styleUrl: './edit-event.scss'
 })
-export class EditEvent implements OnInit {
+export class EditEvent implements OnInit, OnDestroy {
+  @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
+
+  private langChangeSub?: Subscription;
   saving = false;
   loading = false;
   eventId: number = 0;
-  showCancelModal = false;
-
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Events', url: '/events' },
-    { label: 'Edit Event' }
-  ];
-
-  event: EventModel = {
-    name: '',
-    type: '',
-    description: '',
-    price: 0,
-    ageFrom: 0,
-    ageTo: 0,
-    capacity: 0,
-    time: ''
-  };
-
-  eventDate: string = '';
-  eventTime: string = '';
+  eventForm!: FormGroup;
   imagePreview: string | null = null;
-  selectedImage: File | null = null;
 
-  eventTypes = [
-    'Workshop',
-    'Party',
-    'Educational',
-    'Sports',
-    'Arts & Crafts',
-    'Music',
-    'Outdoor',
-    'Special Event'
-  ];
+  // Validation constants
+  readonly MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+  readonly ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+  breadcrumbs: Breadcrumb[] = [];
+
+  // Options for ng-select
+  eventTypes: Array<{ value: string; label: string; icon: string }> = [];
 
   constructor(
+    private fb: FormBuilder,
     private eventService: EventService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
+    this.pageTitleService.setTitle(this.translate.instant('EDIT_EVENT.TITLE'));
     this.eventId = Number(this.route.snapshot.paramMap.get('id'));
+    this.updateTranslatedContent();
+    this.initForm();
     this.loadEvent();
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.updateTranslatedContent();
+      this.pageTitleService.setTitle(this.translate.instant('EDIT_EVENT.TITLE'));
+    });
   }
 
-  loadEvent() {
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
+  }
+
+  private updateTranslatedContent(): void {
+    this.initBreadcrumbs();
+    this.initSelectOptions();
+  }
+
+  private initBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.DASHBOARD') },
+      { label: this.translate.instant('BREADCRUMBS.EVENTS'), url: '/events' },
+      { label: this.translate.instant('BREADCRUMBS.EDIT_EVENT') }
+    ];
+  }
+
+  private initForm(): void {
+    this.eventForm = this.fb.group({
+      id: [0],
+      name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+      type: ['', [Validators.required]],
+      description: ['', [Validators.required, Validators.maxLength(1000)]],
+      price: [0, [Validators.required, Validators.min(0)]],
+      capacity: [1, [Validators.required, Validators.min(1), Validators.max(1000)]],
+      ageFrom: [0, [Validators.required, Validators.min(0), Validators.max(18)]],
+      ageTo: [18, [Validators.required, Validators.min(0), Validators.max(18)]],
+      eventDate: ['', [Validators.required]],
+      eventTime: ['', [Validators.required]],
+      place: ['', [Validators.maxLength(200)]],
+      image: ['']
+    });
+  }
+
+  private initSelectOptions(): void {
+    this.eventTypes = [
+      { value: 'Workshop', label: this.translate.instant('EDIT_EVENT.TYPE_WORKSHOP'), icon: 'bi-tools' },
+      { value: 'Party', label: this.translate.instant('EDIT_EVENT.TYPE_PARTY'), icon: 'bi-balloon' },
+      { value: 'Educational', label: this.translate.instant('EDIT_EVENT.TYPE_EDUCATIONAL'), icon: 'bi-book' },
+      { value: 'Sports', label: this.translate.instant('EDIT_EVENT.TYPE_SPORTS'), icon: 'bi-trophy' },
+      { value: 'Arts & Crafts', label: this.translate.instant('EDIT_EVENT.TYPE_ARTS'), icon: 'bi-palette' },
+      { value: 'Music', label: this.translate.instant('EDIT_EVENT.TYPE_MUSIC'), icon: 'bi-music-note-beamed' },
+      { value: 'Outdoor', label: this.translate.instant('EDIT_EVENT.TYPE_OUTDOOR'), icon: 'bi-tree' },
+      { value: 'Special Event', label: this.translate.instant('EDIT_EVENT.TYPE_SPECIAL'), icon: 'bi-star' }
+    ];
+  }
+
+  loadEvent(): void {
     this.loading = true;
     this.eventService.getEvent(this.eventId).subscribe({
       next: (event) => {
-        this.event = { ...event };
-        
-        // Split existing datetime into date and time parts
+        // Parse date and time from event.time
+        let eventDate = '';
+        let eventTime = '';
+
         if (event.time) {
-          // Try parsing as ISO string first
           let eventDateTime = new Date(event.time);
-          
-          // If invalid, try parsing as date-only string
+
           if (isNaN(eventDateTime.getTime())) {
             eventDateTime = new Date(event.time + 'T00:00:00');
           }
-          
+
           if (!isNaN(eventDateTime.getTime())) {
-            // Get date in YYYY-MM-DD format
             const year = eventDateTime.getFullYear();
             const month = String(eventDateTime.getMonth() + 1).padStart(2, '0');
             const day = String(eventDateTime.getDate()).padStart(2, '0');
-            this.eventDate = `${year}-${month}-${day}`;
-            
-            // Get time in HH:MM format
+            eventDate = `${year}-${month}-${day}`;
+
             const hours = String(eventDateTime.getHours()).padStart(2, '0');
             const minutes = String(eventDateTime.getMinutes()).padStart(2, '0');
-            this.eventTime = `${hours}:${minutes}`;
+            eventTime = `${hours}:${minutes}`;
           }
         }
-        
-        // Set image preview if event has image
-        if (event.image) {
-          this.imagePreview = event.image;
-        }
-        
+
+        // Patch form with event data
+        this.eventForm.patchValue({
+          id: event.id,
+          name: event.name,
+          type: event.type,
+          description: event.description,
+          price: event.price,
+          capacity: event.capacity,
+          ageFrom: event.ageFrom,
+          ageTo: event.ageTo,
+          eventDate: eventDate,
+          eventTime: eventTime,
+          place: event.place || '',
+          image: event.image || ''
+        });
+
+        this.imagePreview = event.image || null;
         this.loading = false;
       },
       error: (error) => {
-        console.error('Error loading event:', error);
+        const sanitizedMessage = this.sanitizeLogMessage(error?.message);
+        console.error(`Error loading event: ${sanitizedMessage}`);
         this.loading = false;
-        this.router.navigate(['/events']);
+        Swal.fire({
+          icon: 'error',
+          title: this.translate.instant('MESSAGES.ERROR'),
+          text: this.translate.instant('EDIT_EVENT.LOAD_ERROR')
+        }).then(() => {
+          this.router.navigate(['/events']);
+        });
       }
     });
   }
 
-  updateEvent() {
-    if (!this.eventDate || !this.eventTime) {
+  updateEvent(): void {
+    if (this.eventForm.invalid) {
+      this.markFormGroupTouched();
+      return;
+    }
+
+    const formValue = this.eventForm.value;
+
+    // Validate age range
+    if (formValue.ageFrom > formValue.ageTo) {
       Swal.fire({
         icon: 'error',
-        title: 'Error!',
-        text: 'Please select both date and time',
-        confirmButtonColor: '#d33'
+        title: this.translate.instant('MESSAGES.ERROR'),
+        text: this.translate.instant('EDIT_EVENT.AGE_RANGE_ERROR')
       });
       return;
     }
-    
-    this.saving = true;
-    
-    // Combine date and time into ISO string
-    const combinedDateTime = `${this.eventDate}T${this.eventTime}:00`;
-    let eventToUpdate = { ...this.event, time: combinedDateTime };
-    
-    // Add image if selected or keep existing
-    if (this.selectedImage) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        eventToUpdate.image = reader.result as string;
-        this.submitUpdate(eventToUpdate);
-      };
-      reader.readAsDataURL(this.selectedImage);
-    } else {
-      // Keep existing image or remove if cleared
-      eventToUpdate.image = this.imagePreview || undefined;
-      this.submitUpdate(eventToUpdate);
-    }
-  }
 
-  private submitUpdate(eventToUpdate: any) {
-    // Clean the event object to remove properties that shouldn't be sent
-    const cleanEvent = {
-      id: eventToUpdate.id,
-      name: eventToUpdate.name,
-      type: eventToUpdate.type,
-      description: eventToUpdate.description,
-      price: eventToUpdate.price,
-      ageFrom: eventToUpdate.ageFrom,
-      ageTo: eventToUpdate.ageTo,
-      capacity: eventToUpdate.capacity,
-      time: eventToUpdate.time,
-      place: eventToUpdate.place,
-      image: eventToUpdate.image
+    this.saving = true;
+
+    // Combine date and time into ISO string
+    const combinedDateTime = `${formValue.eventDate}T${formValue.eventTime}:00`;
+
+    const eventData: EventModel = {
+      id: formValue.id,
+      name: formValue.name,
+      type: formValue.type,
+      description: formValue.description,
+      price: formValue.price,
+      capacity: formValue.capacity,
+      ageFrom: formValue.ageFrom,
+      ageTo: formValue.ageTo,
+      time: combinedDateTime,
+      place: formValue.place,
+      image: formValue.image || this.imagePreview || undefined
     };
-    
-    this.eventService.updateEvent(cleanEvent).subscribe({
+
+    this.eventService.updateEvent(eventData).subscribe({
       next: () => {
         this.saving = false;
         Swal.fire({
           icon: 'success',
-          title: 'Success!',
-          text: 'Event updated successfully',
-          confirmButtonColor: '#3085d6'
+          title: this.translate.instant('MESSAGES.SUCCESS'),
+          text: this.translate.instant('EDIT_EVENT.UPDATE_SUCCESS')
         }).then(() => {
           this.router.navigate(['/events']);
         });
       },
       error: (error) => {
-        console.error('Error updating event:', error);
         this.saving = false;
+        const sanitizedMessage = this.sanitizeLogMessage(error?.message);
+        console.error(`Failed to update event: ${sanitizedMessage}`);
+
         Swal.fire({
           icon: 'error',
-          title: 'Error!',
-          text: 'Failed to update event. Please try again.',
-          confirmButtonColor: '#d33'
+          title: this.translate.instant('MESSAGES.ERROR'),
+          text: this.translate.instant('EDIT_EVENT.UPDATE_ERROR')
         });
       }
     });
   }
 
-  onImageSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedImage = file;
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.imagePreview = e.target.result;
-      };
-      reader.readAsDataURL(file);
+  private sanitizeLogMessage(input: unknown): string {
+    if (typeof input !== 'string') {
+      return 'Unknown';
+    }
+    return input
+      .substring(0, 200)
+      .replace(/[\r\n\t]/g, ' ')
+      .replace(/[^\x20-\x7E]/g, '');
+  }
+
+  cancel(): void {
+    if (this.eventForm.dirty) {
+      Swal.fire({
+        title: this.translate.instant('MESSAGES.UNSAVED_CHANGES'),
+        text: this.translate.instant('MESSAGES.UNSAVED_CHANGES_TEXT'),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: this.translate.instant('MESSAGES.YES_LEAVE'),
+        cancelButtonText: this.translate.instant('MESSAGES.STAY')
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.router.navigate(['/events']);
+        }
+      });
+    } else {
+      this.router.navigate(['/events']);
     }
   }
 
-  removeImage() {
+  onImageSelect(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    // Validate file type
+    if (!this.ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      Swal.fire({
+        icon: 'error',
+        title: this.translate.instant('MESSAGES.INVALID_FILE_TYPE'),
+        text: this.translate.instant('MESSAGES.ALLOWED_IMAGE_TYPES')
+      });
+      this.resetFileInput();
+      return;
+    }
+
+    // Validate file size
+    if (file.size > this.MAX_FILE_SIZE) {
+      Swal.fire({
+        icon: 'error',
+        title: this.translate.instant('MESSAGES.FILE_TOO_LARGE'),
+        text: this.translate.instant('MESSAGES.MAX_FILE_SIZE', { size: this.getReadableFileSize() })
+      });
+      this.resetFileInput();
+      return;
+    }
+
+    // Read and preview image
+    const reader = new FileReader();
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      const result = e.target?.result;
+      if (typeof result === 'string' && result.startsWith('data:image/')) {
+        this.imagePreview = result;
+        this.eventForm.patchValue({ image: result });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: this.translate.instant('MESSAGES.ERROR'),
+          text: this.translate.instant('MESSAGES.IMAGE_READ_ERROR')
+        });
+        this.resetFileInput();
+      }
+    };
+    reader.onerror = () => {
+      Swal.fire({
+        icon: 'error',
+        title: this.translate.instant('MESSAGES.ERROR'),
+        text: this.translate.instant('MESSAGES.IMAGE_READ_ERROR')
+      });
+      this.resetFileInput();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeImage(): void {
+    this.resetFileInput();
+  }
+
+  private resetFileInput(): void {
     this.imagePreview = null;
-    this.selectedImage = null;
-    // Clear the file input
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
+    this.eventForm.patchValue({ image: '' });
+    if (this.fileInput?.nativeElement) {
+      this.fileInput.nativeElement.value = '';
     }
   }
 
-  cancel() {
-    this.showCancelModal = true;
+  private getReadableFileSize(): string {
+    const sizeInMB = this.MAX_FILE_SIZE / (1024 * 1024);
+    return `${sizeInMB}MB`;
   }
 
-  confirmCancel() {
-    this.showCancelModal = false;
-    this.router.navigate(['/events']);
+  private markFormGroupTouched(): void {
+    Object.values(this.eventForm.controls).forEach(control => {
+      control.markAsTouched();
+    });
   }
 
-  closeCancelModal() {
-    this.showCancelModal = false;
+  get formControls() {
+    return this.eventForm.controls;
+  }
+
+  isFieldInvalid(fieldName: string): boolean {
+    const field = this.eventForm.get(fieldName);
+    return !!(field && field.invalid && field.touched);
+  }
+
+  getFieldError(fieldName: string): string {
+    const field = this.eventForm.get(fieldName);
+    if (!field || !field.errors) return '';
+
+    if (field.errors['required']) {
+      return this.translate.instant('VALIDATION.REQUIRED');
+    }
+    if (field.errors['minlength']) {
+      const minLength = field.errors['minlength'].requiredLength;
+      return this.translate.instant('VALIDATION.MIN_LENGTH', { length: minLength });
+    }
+    if (field.errors['maxlength']) {
+      const maxLength = field.errors['maxlength'].requiredLength;
+      return this.translate.instant('VALIDATION.MAX_LENGTH', { length: maxLength });
+    }
+    if (field.errors['min']) {
+      const minValue = field.errors['min'].min;
+      return this.translate.instant('VALIDATION.MIN_VALUE', { value: minValue });
+    }
+    if (field.errors['max']) {
+      const maxValue = field.errors['max'].max;
+      return this.translate.instant('VALIDATION.MAX_VALUE', { value: maxValue });
+    }
+    return this.translate.instant('VALIDATION.INVALID_FIELD');
   }
 }

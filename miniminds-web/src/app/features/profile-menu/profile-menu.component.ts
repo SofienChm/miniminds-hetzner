@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth';
 import { AuthResponse } from '../../core/interfaces/dto/auth-response-dto';
 import { NotificationService } from '../../core/services/notification-service';
+import { MessagesService } from '../../core/services/messages.service';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-profile-menu',
@@ -12,14 +14,16 @@ import { NotificationService } from '../../core/services/notification-service';
   templateUrl: './profile-menu.component.html',
   styleUrl: './profile-menu.component.scss'
 })
-export class ProfileMenuComponent implements OnInit {
+export class ProfileMenuComponent implements OnInit, OnDestroy {
   currentUser: AuthResponse | null = null;
   messageUnreadCount = 0;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private authService: AuthService,
     private router: Router,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private messagesService: MessagesService
   ) {}
 
   ngOnInit(): void {
@@ -28,9 +32,27 @@ export class ProfileMenuComponent implements OnInit {
       return;
     }
     this.currentUser = this.authService.getCurrentUser();
-    
-    this.notificationService.messageUnreadCount$.subscribe(count => {
-      this.messageUnreadCount = count;
+
+    // Load initial unread count
+    this.loadMessageUnreadCount();
+
+    // Subscribe to real-time updates via SignalR
+    this.notificationService.messageUnreadCount$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(count => {
+        this.messageUnreadCount = count;
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private loadMessageUnreadCount(): void {
+    this.messagesService.getUnreadCount().subscribe({
+      next: (count) => this.messageUnreadCount = count,
+      error: () => this.messageUnreadCount = 0
     });
   }
 

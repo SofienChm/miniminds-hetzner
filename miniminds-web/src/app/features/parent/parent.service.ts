@@ -69,4 +69,8 @@ export class ParentService {
       this.parentsSubject.next([...this.parents]);
     });
   }
+
+  getParentProfilePicture(id: number): Observable<{ profilePicture: string }> {
+    return this.http.get<{ profilePicture: string }>(`${this.apiUrl}/${id}/profile-picture`);
+  }
 }

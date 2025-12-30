@@ -1,11 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { AuthResponse } from '../interfaces/dto/auth-response-dto';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { LoginRequest } from '../interfaces/dto/login-request-dto';
 import { RegisterRequest } from '../interfaces/dto/register-request-dto';
-import { ApiConfig } from '../config/api.config';
+import { ApiConfig } from '../../core/config/api.config';
 
 @Injectable({
   providedIn: 'root'
@@ -15,7 +15,11 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<AuthResponse | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private injector: Injector
+  ) {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       this.currentUserSubject.next(JSON.parse(storedUser));
@@ -50,7 +54,18 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/register`, data);
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    // Unregister FCM push notifications before logout
+    try {
+      const { FcmPushNotificationService } = await import('./fcm-push-notification.service');
+      const fcmService = this.injector.get(FcmPushNotificationService);
+      if (fcmService.isSupported()) {
+        await fcmService.unregister();
+      }
+    } catch (error) {
+      console.error('Error unregistering push notifications:', error);
+    }
+
     localStorage.removeItem('currentUser');
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
@@ -64,7 +79,21 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     const token = this.getToken();
-    return !!token;
+    if (!token) return false;
+
+    try {
+      // Decode the payload (middle part of JWT)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+
+      // exp is in seconds, Date.now() is in milliseconds
+      const expiryTime = payload.exp * 1000;
+
+      // Check if token expires in the future (with 60 second buffer)
+      return expiryTime > (Date.now() + 60000);
+    } catch {
+      // If token is malformed, consider it invalid
+      return false;
+    }
   }
 
   getCurrentUser(): AuthResponse | null {
@@ -117,8 +146,12 @@ export class AuthService {
     return this.getUserRole() === 'Teacher';
   }
 
+  getUserId(): string | null {
+    return localStorage.getItem('userId');
+  }
+
   updateLanguage(language: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/update-language`, { language }).pipe(
+    return this.http.put(`${this.apiUrl}/update-language`, { Language: language }).pipe(
       tap(() => {
         const user = this.getCurrentUser();
         if (user) {

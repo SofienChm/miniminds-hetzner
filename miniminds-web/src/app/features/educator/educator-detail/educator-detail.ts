@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { EducatorModel } from '../educator.interface';
 import { EducatorService } from '../educator.service';
 import { ChildrenService } from '../../children/children.service';
@@ -10,10 +11,12 @@ import { AuthService } from '../../../core/services/auth';
 import { TitlePage, TitleAction, Breadcrumb } from '../../../shared/layouts/title-page/title-page';
 import { HttpClient } from '@angular/common/http';
 import { ApiConfig } from '../../../core/config/api.config';
+import { AppCurrencyPipe } from '../../../core/services/currency/currency.pipe';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-educator-detail',
-  imports: [CommonModule, TitlePage, FormsModule],
+  imports: [CommonModule, TitlePage, FormsModule, AppCurrencyPipe, TranslateModule],
   standalone: true,
   templateUrl: './educator-detail.html',
   styleUrl: './educator-detail.scss'
@@ -21,18 +24,17 @@ import { ApiConfig } from '../../../core/config/api.config';
 export class EducatorDetail implements OnInit {
   educator: EducatorModel | null = null;
   loading = false;
+  error = '';
   educatorId: number = 0;
   showAddChildModal = false;
   availableChildren: ChildModel[] = [];
+  filteredChildren: ChildModel[] = [];
   assignedChildren: ChildModel[] = [];
   selectedChildId: number | null = null;
+  searchTerm = '';
+  assigningChild = false;
 
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Educators', url: '/educators' },
-    { label: 'Educator Details' }
-  ];
-
+  breadcrumbs: Breadcrumb[] = [];
   titleActions: TitleAction[] = [];
 
   constructor(
@@ -41,21 +43,36 @@ export class EducatorDetail implements OnInit {
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) {}
 
   ngOnInit() {
     this.educatorId = Number(this.route.snapshot.paramMap.get('id'));
+    this.initBreadcrumbs();
     this.setupTitleActions();
     this.loadEducator();
     this.loadAssignedChildren();
+
+    // Update translations when language changes
+    this.translate.onLangChange.subscribe(() => {
+      this.initBreadcrumbs();
+      this.setupTitleActions();
+    });
+  }
+
+  private initBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.EDUCATORS'), url: '/educators' },
+      { label: this.translate.instant('EDUCATOR_DETAIL.BREADCRUMB_DETAILS') }
+    ];
   }
 
   setupTitleActions() {
     this.titleActions = [
       {
-        label: 'Back to Educators',
-        class: 'btn-outline-secondary',
+        label: this.translate.instant('EDUCATOR_DETAIL.BACK_TO_EDUCATORS'),
+        class: 'btn-outline-secondary btn-cancel-global',
         icon: 'bi bi-arrow-left',
         action: () => this.goBack()
       }
@@ -63,8 +80,8 @@ export class EducatorDetail implements OnInit {
 
     if (this.authService.isAdmin()) {
       this.titleActions.push({
-        label: 'Edit Educator',
-        class: 'btn-primary',
+        label: this.translate.instant('EDUCATOR_DETAIL.EDIT_EDUCATOR'),
+        class: 'btn-edit-global-2',
         icon: 'bi bi-pencil-square',
         action: () => this.router.navigate(['/educators/edit', this.educatorId])
       });
@@ -116,6 +133,8 @@ export class EducatorDetail implements OnInit {
   closeAddChildModal() {
     this.showAddChildModal = false;
     this.selectedChildId = null;
+    this.searchTerm = '';
+    this.filteredChildren = [];
   }
 
   loadAvailableChildren() {
@@ -123,31 +142,60 @@ export class EducatorDetail implements OnInit {
       next: (children) => {
         const assignedIds = this.assignedChildren.map(c => c.id);
         this.availableChildren = children.filter(c => !assignedIds.includes(c.id));
+        this.filteredChildren = [...this.availableChildren];
       },
       error: (error) => console.error('Error loading children:', error)
     });
   }
 
-  assignChildToEducator() {
-    if (!this.selectedChildId) return;
+  filterChildren() {
+    if (!this.searchTerm.trim()) {
+      this.filteredChildren = [...this.availableChildren];
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredChildren = this.availableChildren.filter(child =>
+        `${child.firstName} ${child.lastName}`.toLowerCase().includes(term)
+      );
+    }
+  }
 
+  assignChildToEducator(childId?: number) {
+    const idToAssign = childId || this.selectedChildId;
+    if (!idToAssign) return;
+
+    this.assigningChild = true;
     this.http.post(`${ApiConfig.ENDPOINTS.EDUCATORS}/${this.educatorId}/assign-child`, {
-      childId: this.selectedChildId
+      childId: idToAssign
     }).subscribe({
       next: () => {
+        this.assigningChild = false;
         this.closeAddChildModal();
         this.loadAssignedChildren();
       },
-      error: (error) => console.error('Error assigning child:', error)
+      error: (error) => {
+        this.assigningChild = false;
+        console.error('Error assigning child:', error);
+      }
     });
   }
 
   removeChild(childId: number) {
-    if (!confirm('Remove this child from the educator?')) return;
-
-    this.http.delete(`${ApiConfig.ENDPOINTS.EDUCATORS}/${this.educatorId}/remove-child/${childId}`).subscribe({
-      next: () => this.loadAssignedChildren(),
-      error: (error) => console.error('Error removing child:', error)
+    Swal.fire({
+      title: this.translate.instant('COMMON.ARE_YOU_SURE'),
+      text: this.translate.instant('EDUCATOR_DETAIL.REMOVE_CHILD_CONFIRM'),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: this.translate.instant('COMMON.YES_REMOVE'),
+      cancelButtonText: this.translate.instant('COMMON.CANCEL')
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.http.delete(`${ApiConfig.ENDPOINTS.EDUCATORS}/${this.educatorId}/remove-child/${childId}`).subscribe({
+          next: () => this.loadAssignedChildren(),
+          error: (error) => console.error('Error removing child:', error)
+        });
+      }
     });
   }
 

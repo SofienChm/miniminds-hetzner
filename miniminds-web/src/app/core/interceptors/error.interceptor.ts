@@ -4,11 +4,27 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import Swal from 'sweetalert2';
 
+// Custom header to skip error interceptor UI (popups/logging)
+export const SKIP_ERROR_HANDLER = 'X-Skip-Error-Handler';
+
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
-  return next(req).pipe(
+  // Check if this request should skip error handling UI
+  const skipErrorHandler = req.headers.has(SKIP_ERROR_HANDLER);
+
+  // Remove the custom header before sending (backend shouldn't see it)
+  const cleanReq = skipErrorHandler
+    ? req.clone({ headers: req.headers.delete(SKIP_ERROR_HANDLER) })
+    : req;
+
+  return next(cleanReq).pipe(
     catchError((error: HttpErrorResponse) => {
+      // If skip flag is set, just rethrow without UI or logging
+      if (skipErrorHandler) {
+        return throwError(() => error);
+      }
+
       let errorMessage = 'An unexpected error occurred';
 
       if (error.error instanceof ErrorEvent) {
@@ -85,7 +101,6 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
               text: errorMessage,
               confirmButtonColor: '#506EE4'
             });
-            console.error('Server Error:', error);
             break;
 
           case 503:
@@ -110,14 +125,6 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             });
         }
       }
-
-      // Log error for debugging
-      console.error('HTTP Error:', {
-        status: error.status,
-        message: errorMessage,
-        url: error.url,
-        error: error.error
-      });
 
       return throwError(() => error);
     })

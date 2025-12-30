@@ -10,6 +10,10 @@ export const routes: Routes = [
         path: 'register',
         loadComponent: () => import('./features/auth/register/register').then(m => m.Register)
     },
+    {
+        path: 'reset-password',
+        loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
+    },
   {
     path: '',
     loadComponent: () => import('./shared/layouts/main-layout/main-layout').then(m => m.MainLayout),
@@ -20,12 +24,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard').then(m => m.Dashboard)
       },
       {
+        path: 'dashboard-2',
+        loadComponent: () => import('./features/dashboard/dashboard-2').then(m => m.Dashboard)
+      },
+      {
         path: 'parents',
         loadComponent: () => import('./features/parent/parent').then(m => m.Parent)
       },
       {
         path: 'parents/add',
-        loadComponent: () => import('./features/parent/add-parent/add-parent').then(m => m.AddParent)
+        loadComponent: () => import('./features/parent/add-parent/add-parent').then(m => m.AddParentComponent)
       },
       {
         path: 'parents/edit/:id',
@@ -78,6 +86,10 @@ export const routes: Routes = [
       {
         path: 'activities',
         loadComponent: () => import('./features/daily-activities/daily-activities').then(m => m.DailyActivities)
+      },
+      {
+        path: 'activities/detail/:id',
+        loadComponent: () => import('./features/daily-activities/activity-detail/activity-detail').then(m => m.ActivityDetail)
       },
       {
         path: 'attendance',
@@ -184,6 +196,38 @@ export const routes: Routes = [
         loadComponent: () => import('./features/reclamations/reclamations.component').then(m => m.ReclamationsComponent)
       },
       {
+        path: 'gallery',
+        loadComponent: () => import('./features/gallery/gallery').then(m => m.Gallery)
+      },
+      {
+        path: 'food-menu',
+        loadComponent: () => import('./features/food-menu/food-menu.component').then(m => m.FoodMenuComponent)
+      },
+      {
+        path: 'food-menu/add',
+        loadComponent: () => import('./features/food-menu/add-menu/add-menu.component').then(m => m.AddMenuComponent)
+      },
+      {
+        path: 'food-menu/edit/:id',
+        loadComponent: () => import('./features/food-menu/add-menu/add-menu.component').then(m => m.AddMenuComponent)
+      },
+      {
+        path: 'food-menu/food-items',
+        loadComponent: () => import('./features/food-menu/food-items/food-items.component').then(m => m.FoodItemsComponent)
+      },
+      {
+        path: 'food-menu/parent',
+        loadComponent: () => import('./features/food-menu/parent-menu-view/parent-menu-view.component').then(m => m.ParentMenuViewComponent)
+      },
+      {
+        path: 'food-menu/detail/:id',
+        loadComponent: () => import('./features/food-menu/menu-detail/menu-detail.component').then(m => m.MenuDetailComponent)
+      },
+      {
+        path: 'food-menu/report/:id',
+        loadComponent: () => import('./features/food-menu/menu-report/menu-report.component').then(m => m.MenuReportComponent)
+      },
+      {
         path: 'notifications',
         loadComponent: () => import('./features/notifications/notifications.component').then(m => m.NotificationsComponent)
       },
@@ -191,7 +235,18 @@ export const routes: Routes = [
         path: 'profile-menu',
         loadComponent: () => import('./features/profile-menu/profile-menu.component').then(m => m.ProfileMenuComponent)
       },
-
+      {
+        path: 'qr-checkin',
+        loadComponent: () => import('./features/qr-checkin/qr-checkin').then(m => m.QrCheckin)
+      },
+      {
+        path: 'qr-management',
+        loadComponent: () => import('./features/qr-management/qr-management').then(m => m.QrManagement)
+      },
+      {
+        path: 'base-ui',
+        loadComponent: () => import('./features/base-ui/base-ui').then(m => m.BaseUi)
+      },
       {
         path: '',
         redirectTo: 'dashboard',
@@ -200,7 +255,19 @@ export const routes: Routes = [
     ]
   },
     {
+        path: '404',
+        loadComponent: () => import('./features/not-found/not-found.component').then(m => m.NotFoundComponent)
+    },
+    {
+        path: '403',
+        loadComponent: () => import('./features/forbidden/forbidden.component').then(m => m.ForbiddenComponent)
+    },
+    {
+        path: '500',
+        loadComponent: () => import('./features/forbidden/forbidden.component').then(m => m.ForbiddenComponent)
+    },
+    {
         path: '**',
-        redirectTo: 'dashboard'
+        loadComponent: () => import('./features/not-found/not-found.component').then(m => m.NotFoundComponent)
     }
 ];

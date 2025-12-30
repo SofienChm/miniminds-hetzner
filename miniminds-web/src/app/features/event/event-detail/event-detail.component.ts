@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { EventService } from '../event.service';
 import { EventModel } from '../event.interface';
 import { EventParticipantsService } from '../event-participants.service';
@@ -11,22 +12,27 @@ import { EventParticipant } from '../event-participants.interface';
 import { TitlePage, TitleAction } from '../../../shared/layouts/title-page/title-page';
 import { AuthService } from '../../../core/services/auth';
 import { Location } from '@angular/common';
+import { AppCurrencyPipe } from '../../../core/services/currency/currency.pipe';
+import { PageTitleService } from '../../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TitlePage],
+  imports: [CommonModule, RouterModule, FormsModule, TitlePage, AppCurrencyPipe, TranslateModule],
   templateUrl: './event-detail.component.html',
   styleUrls: ['./event-detail.component.scss']
 })
-export class EventDetailComponent implements OnInit {
+export class EventDetailComponent implements OnInit, OnDestroy {
+  private langChangeSub?: Subscription;
   event: EventModel | null = null;
   loading = true;
   eventId: number = 0;
   registeredCount = 0;
   uploading = false;
   titleActions: TitleAction[] = [];
-  
+
   // Modal properties
   showAddParticipantModal = false;
   loadingStudents = false;
@@ -45,14 +51,26 @@ export class EventDetailComponent implements OnInit {
     private eventParticipantsService: EventParticipantsService,
     private childrenService: ChildrenService,
     private authService: AuthService,
-    private location: Location
+    private location: Location,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit(): void {
+    this.pageTitleService.setTitle(this.translate.instant('EVENT_DETAIL.EVENT_DETAILS'));
     this.route.params.subscribe(params => {
       this.eventId = +params['id'];
       this.loadEvent();
     });
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.pageTitleService.setTitle(this.translate.instant('EVENT_DETAIL.EVENT_DETAILS'));
+      this.setupTitleActions();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
   }
   back() {
     this.location.back();
@@ -92,21 +110,21 @@ export class EventDetailComponent implements OnInit {
   setupTitleActions(): void {
     this.titleActions = [
       {
-        label: 'Back to Events',
+        label: this.translate.instant('EVENT_DETAIL.BACK_TO_EVENTS'),
         icon: 'bi bi-arrow-left',
         class: 'btn-cancel-global',
         action: () => this.goBack()
       },
       {
-        label: 'View Participants',
+        label: this.translate.instant('EVENT_DETAIL.VIEW_PARTICIPANTS'),
         icon: 'bi bi-people',
-        class: 'btn-primary',
+        class: 'btn-add-global-2',
         action: () => this.router.navigate(['/events', this.eventId, 'participants'])
       },
       {
-        label: 'Edit Event',
+        label: this.translate.instant('EVENT_DETAIL.EDIT_EVENT'),
         icon: 'bi bi-pencil',
-        class: 'btn-outline-primary',
+        class: 'btn-edit-global-2',
         action: () => this.router.navigate(['/events/edit', this.eventId])
       }
     ];
@@ -170,7 +188,12 @@ export class EventDetailComponent implements OnInit {
       error: (error) => {
         console.error('Error updating event image:', error);
         this.uploading = false;
-        alert('Failed to update image. Please try again.');
+        Swal.fire({
+          icon: 'error',
+          title: this.translate.instant('COMMON.ERROR'),
+          text: 'Failed to update image. Please try again.',
+          confirmButtonColor: '#7dd3c0'
+        });
       }
     });
   }
@@ -264,7 +287,12 @@ export class EventDetailComponent implements OnInit {
     }).catch(error => {
       console.error('Error adding participants:', error);
       this.addingParticipants = false;
-      alert('Failed to add participants. Please try again.');
+      Swal.fire({
+        icon: 'error',
+        title: this.translate.instant('COMMON.ERROR'),
+        text: 'Failed to add participants. Please try again.',
+        confirmButtonColor: '#7dd3c0'
+      });
     });
   }
 

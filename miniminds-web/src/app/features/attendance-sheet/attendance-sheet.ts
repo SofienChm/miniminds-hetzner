@@ -1,6 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { AttendanceService } from './attendance.service';
 import { Attendance, AttendanceStats } from './attendance.interface';
 import { TitlePage } from '../../shared/layouts/title-page/title-page';
@@ -8,13 +10,16 @@ import { ChildrenService } from '../children/children.service';
 import { ChildModel } from '../children/children.interface';
 import { interval, Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth';
+import { SignalRService } from '../../core/services/signalr.service';
+import { PageTitleService } from '../../core/services/page-title.service';
 
 @Component({
   selector: 'app-attendance-sheet',
-  imports: [CommonModule, FormsModule, TitlePage],
+  imports: [CommonModule, FormsModule, TitlePage, TranslateModule, NgSelectModule],
   standalone: true,
   templateUrl: './attendance-sheet.html',
-  styleUrl: './attendance-sheet.scss'
+  styleUrl: './attendance-sheet.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AttendanceSheet implements OnInit, OnDestroy {
   attendances: Attendance[] = [];
@@ -24,41 +29,67 @@ export class AttendanceSheet implements OnInit, OnDestroy {
   loading = false;
   currentTime = new Date();
   children: ChildModel[] = [];
+  availableChildren: ChildModel[] = [];
   selectedChildId: number | null = null;
   checkInNotes = '';
   showCheckInForm = false;
   private refreshSubscription?: Subscription;
   private clockSubscription?: Subscription;
+  private langChangeSub?: Subscription;
+
   get isParent(): boolean {
       return this.authService.isParent();
   }
+
   constructor(
     private authService: AuthService,
     private attendanceService: AttendanceService,
-    private childrenService: ChildrenService
+    private childrenService: ChildrenService,
+    private signalRService: SignalRService,
+    private cdr: ChangeDetectorRef,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit(): void {
+    this.pageTitleService.setTitle(this.translate.instant('ATTENDANCE_PAGE.TITLE'));
     this.loadTodayData();
     this.loadChildren();
-    this.startAutoRefresh();
+    this.setupRealtimeUpdates();
     this.startClock();
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.pageTitleService.setTitle(this.translate.instant('ATTENDANCE_PAGE.TITLE'));
+      this.cdr.detectChanges();
+    });
   }
 
   loadChildren(): void {
     this.childrenService.loadChildren().subscribe({
-      next: (children) => this.children = children
+      next: (children) => {
+        this.children = children;
+        this.updateAvailableChildren();
+      }
     });
   }
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
     this.clockSubscription?.unsubscribe();
+    this.langChangeSub?.unsubscribe();
+    this.signalRService.offAttendanceUpdate();
   }
 
-  startAutoRefresh(): void {
-    // Refresh data every 30 seconds
-    this.refreshSubscription = interval(30000).subscribe(() => {
+  setupRealtimeUpdates(): void {
+    // Listen for real-time updates via WebSocket
+    this.signalRService.onAttendanceUpdate(() => {
+      if (this.selectedDate === new Date().toISOString().split('T')[0]) {
+        this.loadTodayData();
+      }
+    });
+
+    // Fallback: Poll every 2 minutes in case WebSocket fails
+    this.refreshSubscription = interval(120000).subscribe(() => {
       if (this.selectedDate === new Date().toISOString().split('T')[0]) {
         this.loadTodayData();
       }
@@ -69,6 +100,7 @@ export class AttendanceSheet implements OnInit, OnDestroy {
     // Update current time every second
     this.clockSubscription = interval(1000).subscribe(() => {
       this.currentTime = new Date();
+      this.cdr.detectChanges();
     });
   }
 
@@ -77,6 +109,7 @@ export class AttendanceSheet implements OnInit, OnDestroy {
     this.attendanceService.getTodayAttendance().subscribe({
       next: (data) => {
         this.attendances = data;
+        this.updateAvailableChildren();
         this.loading = false;
       },
       error: () => this.loading = false
@@ -112,8 +145,8 @@ export class AttendanceSheet implements OnInit, OnDestroy {
 
   get filteredAttendances(): Attendance[] {
     if (!this.searchTerm) return this.attendances;
-    
-    return this.attendances.filter(a => 
+
+    return this.attendances.filter(a =>
       a.child?.firstName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
       a.child?.lastName.toLowerCase().includes(this.searchTerm.toLowerCase())
     );
@@ -125,8 +158,8 @@ export class AttendanceSheet implements OnInit, OnDestroy {
   }
 
   getStatusText(attendance: Attendance): string {
-    if (attendance.checkOutTime) return 'Checked Out';
-    return 'Present';
+    if (attendance.checkOutTime) return this.translate.instant('ATTENDANCE_PAGE.STATUS_CHECKED_OUT');
+    return this.translate.instant('ATTENDANCE_PAGE.STATUS_PRESENT');
   }
 
   formatTime(dateString: string): string {
@@ -138,7 +171,7 @@ export class AttendanceSheet implements OnInit, OnDestroy {
 
   calculateDuration(checkIn: string, checkOut?: string): number {
     const checkInTime = new Date(checkIn).getTime();
-    const endTime = checkOut ? new Date(checkOut).getTime() : this.currentTime.getTime();
+    const endTime = checkOut ? new Date(checkOut).getTime() : Date.now();
     return (endTime - checkInTime) / (1000 * 60 * 60);
   }
 
@@ -157,11 +190,11 @@ export class AttendanceSheet implements OnInit, OnDestroy {
     return `${hours}h ${minutes}m`;
   }
 
-  get availableChildren(): ChildModel[] {
+  updateAvailableChildren(): void {
     const checkedInIds = this.attendances
       .filter(a => !a.checkOutTime)
       .map(a => a.childId);
-    return this.children.filter(c => !checkedInIds.includes(c.id!));
+    this.availableChildren = this.children.filter(c => !checkedInIds.includes(c.id!));
   }
 
   toggleCheckInForm(): void {
@@ -178,7 +211,7 @@ export class AttendanceSheet implements OnInit, OnDestroy {
 
   checkInChild(): void {
     if (!this.selectedChildId) return;
-    
+
     this.attendanceService.checkIn(this.selectedChildId, this.checkInNotes).subscribe({
       next: () => {
         this.loadTodayData();

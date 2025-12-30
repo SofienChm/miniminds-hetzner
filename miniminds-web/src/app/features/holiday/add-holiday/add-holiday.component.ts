@@ -2,13 +2,14 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { HolidayService } from '../holiday.service';
 import { TitlePage } from '../../../shared/layouts/title-page/title-page';
 
 @Component({
   selector: 'app-add-holiday',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TitlePage],
+  imports: [CommonModule, ReactiveFormsModule, TitlePage, TranslateModule],
   templateUrl: './add-holiday.component.html',
   styleUrls: ['./add-holiday.component.scss']
 })

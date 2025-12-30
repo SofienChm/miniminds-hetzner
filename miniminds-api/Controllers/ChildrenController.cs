@@ -1,4 +1,5 @@
 using DaycareAPI.Data;
+using DaycareAPI.DTOs;
 using DaycareAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,29 +21,78 @@ namespace DaycareAPI.Controllers
 
         // GET: api/Children
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Child>>> GetChildren()
+        public async Task<ActionResult<IEnumerable<ChildListDto>>> GetChildren()
         {
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-            
+
+            IQueryable<Child> query;
+
             if (userRole == "Parent")
             {
                 var parentIdClaim = User.FindFirst("ParentId")?.Value;
                 if (int.TryParse(parentIdClaim, out int parentId))
                 {
-                    return await _context.Children
+                    query = _context.Children
                         .Where(c => c.ParentId == parentId)
                         .Include(c => c.Parent)
-                        .OrderByDescending(c => c.CreatedAt)
-                        .ToListAsync();
+                        .OrderByDescending(c => c.CreatedAt);
                 }
-                return Forbid();
+                else
+                {
+                    return Forbid();
+                }
             }
-            
-            // Admin and Teacher can see all children
-            return await _context.Children
-                .Include(c => c.Parent)
-                .OrderByDescending(c => c.CreatedAt)
+            else
+            {
+                // Admin and Teacher can see all children
+                query = _context.Children
+                    .Include(c => c.Parent)
+                    .OrderByDescending(c => c.CreatedAt);
+            }
+
+            var children = await query
+                .Select(c => new ChildListDto
+                {
+                    Id = c.Id,
+                    FirstName = c.FirstName,
+                    LastName = c.LastName,
+                    DateOfBirth = c.DateOfBirth,
+                    Gender = c.Gender,
+                    Allergies = c.Allergies,
+                    MedicalNotes = c.MedicalNotes,
+                    ParentId = c.ParentId,
+                    EnrollmentDate = c.EnrollmentDate,
+                    IsActive = c.IsActive,
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt,
+                    HasProfilePicture = !string.IsNullOrEmpty(c.ProfilePicture),
+                    Parent = c.Parent != null ? new ParentBasicDto
+                    {
+                        Id = c.Parent.Id,
+                        FirstName = c.Parent.FirstName,
+                        LastName = c.Parent.LastName,
+                        Email = c.Parent.Email,
+                        PhoneNumber = c.Parent.PhoneNumber
+                    } : null
+                })
                 .ToListAsync();
+
+            return children;
+        }
+
+        // GET: api/Children/5/profile-picture
+        [HttpGet("{id}/profile-picture")]
+        public async Task<ActionResult<object>> GetChildProfilePicture(int id)
+        {
+            var profilePicture = await _context.Children
+                .Where(c => c.Id == id)
+                .Select(c => c.ProfilePicture)
+                .FirstOrDefaultAsync();
+
+            if (profilePicture == null)
+                return NotFound();
+
+            return Ok(new { profilePicture });
         }
 
         // GET: api/Children/5

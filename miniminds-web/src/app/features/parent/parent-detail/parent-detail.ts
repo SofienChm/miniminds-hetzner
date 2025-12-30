@@ -1,28 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 import { ParentService } from '../parent.service';
 import { ParentModel } from '../parent.interface';
 import { FeeService } from '../../fee/fee.service';
 import { CreateFeeModel } from '../../fee/fee.interface';
-import { TitlePage, TitleAction } from '../../../shared/layouts/title-page/title-page';
+import { TitlePage, TitleAction, Breadcrumb } from '../../../shared/layouts/title-page/title-page';
 import { ChildrenService } from '../../children/children.service';
 import { ChildModel } from '../../children/children.interface';
 import Swal from 'sweetalert2';
 import { AuthService } from '../../../core/services/auth';
 import { Location } from '@angular/common';
 import { ParentChildHeaderComponent } from '../../../shared/components/parent-child-header/parent-child-header.component';
+import { PageTitleService } from '../../../core/services/page-title.service';
 
 @Component({
   selector: 'app-parent-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, TitlePage, ParentChildHeaderComponent],
+  imports: [CommonModule, FormsModule, TitlePage, ParentChildHeaderComponent, TranslateModule],
   templateUrl: './parent-detail.html',
   styleUrls: ['./parent-detail.scss']
 })
-export class ParentDetail implements OnInit {
+export class ParentDetail implements OnInit, OnDestroy {
   parent: ParentModel | null = null;
+  // index of the currently displayed child in the children column
+  currentChildIndex = 0;
   loading = true;
   error: string | null = null;
   currentUserProfilePicture: string = '';
@@ -36,8 +41,11 @@ export class ParentDetail implements OnInit {
   savingFee = false;
   linkingChild = false;
   isAdmin = true; // TODO: Get from auth service
-   get isParent(): boolean {
-      return this.authService.isParent();
+  breadcrumbs: Breadcrumb[] = [];
+  private langChangeSub?: Subscription;
+
+  get isParent(): boolean {
+    return this.authService.isParent();
   }
   newFee: CreateFeeModel = {
     childId: 0,
@@ -54,17 +62,55 @@ export class ParentDetail implements OnInit {
     private feeService: FeeService,
     private childrenService: ChildrenService,
     private authService: AuthService,
-    private location: Location
-
+    private location: Location,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
     this.currentUserProfilePicture = user?.profilePicture || '';
+    this.pageTitleService.setTitle(this.translate.instant('PARENTS.PARENT_DETAILS'));
+    this.setupBreadcrumbs();
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.loadParentDetails(+id);
     }
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.pageTitleService.setTitle(this.translate.instant('PARENTS.PARENT_DETAILS'));
+      this.setupBreadcrumbs();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
+  }
+
+  private setupBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.DASHBOARD'), url: '/dashboard' },
+      { label: this.translate.instant('PARENTS.TITLE'), url: '/parents' },
+      { label: this.parent?.firstName ? `${this.parent.firstName} ${this.parent.lastName}` : this.translate.instant('PARENTS.PARENT_DETAILS') }
+    ];
+  }
+
+  // move to next child (wraps around)
+  nextChild(): void {
+    if (!this.parent?.children || this.parent.children.length === 0) return;
+    this.currentChildIndex = (this.currentChildIndex + 1) % this.parent.children.length;
+  }
+
+  // move to previous child (wraps around)
+  prevChild(): void {
+    if (!this.parent?.children || this.parent.children.length === 0) return;
+    this.currentChildIndex = (this.currentChildIndex - 1 + this.parent.children.length) % this.parent.children.length;
+  }
+
+  // current child getter
+  get currentChild(): ChildModel | null {
+    if (!this.parent?.children || this.parent.children.length === 0) return null;
+    return this.parent.children[this.currentChildIndex] || null;
   }
 
   loadParentDetails(id: number): void {
@@ -82,6 +128,8 @@ export class ParentDetail implements OnInit {
             ...child,
             age: this.calculateAge(child.dateOfBirth)
           }));
+          // reset current child index when loading children
+          this.currentChildIndex = 0;
         }
         
         this.loading = false;
@@ -136,21 +184,21 @@ export class ParentDetail implements OnInit {
   }
   addChild(): void {
     Swal.fire({
-      title: 'Add Child',
-      text: 'Choose an option',
+      title: this.translate.instant('PARENTS.ADD_CHILD'),
+      text: this.translate.instant('PARENTS.CHOOSE_OPTION'),
       icon: 'question',
       showCancelButton: true,
       showDenyButton: true,
-      confirmButtonText: '<i class="bi bi-plus-square"></i> Create New Child',
-      denyButtonText: '<i class="bi bi-list-ul"></i> Select Existing Child',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: `<i class="bi bi-plus-square"></i> ${this.translate.instant('PARENTS.CREATE_NEW_CHILD')}`,
+      denyButtonText: `<i class="bi bi-list-ul"></i> ${this.translate.instant('PARENTS.SELECT_EXISTING_CHILD')}`,
+      cancelButtonText: this.translate.instant('COMMON.CANCEL'),
       confirmButtonColor: '#3085d6',
       denyButtonColor: '#6c757d',
       cancelButtonColor: '#d33',
       customClass: {
         confirmButton: 'btn btn-primary me-2',
         denyButton: 'btn btn-secondary me-2',
-        cancelButton: 'btn btn-outline-secondary'
+        cancelButton: 'btn btn-outline-secondary btn-cancel-global'
       },
       buttonsStyling: false
     }).then((result) => {
@@ -175,7 +223,7 @@ export class ParentDetail implements OnInit {
         this.filteredChildren = [...this.availableChildren];
       },
       error: () => {
-        Swal.fire('Error', 'Failed to load children', 'error');
+        Swal.fire(this.translate.instant('MESSAGES.ERROR'), this.translate.instant('PARENTS.FAILED_LOAD_CHILDREN'), 'error');
       }
     });
   }
@@ -190,7 +238,7 @@ export class ParentDetail implements OnInit {
   linkChildToParent(childId: number): void {
     if (!this.parent?.id) return;
     this.linkingChild = true;
-    
+
     this.childrenService.getChild(childId).subscribe({
       next: (child) => {
         const updatedChild = { ...child, parentId: this.parent!.id! };
@@ -199,17 +247,17 @@ export class ParentDetail implements OnInit {
             this.linkingChild = false;
             this.showSelectChildModal = false;
             this.loadParentDetails(this.parent!.id!);
-            Swal.fire('Success', 'Child linked successfully!', 'success');
+            Swal.fire(this.translate.instant('MESSAGES.SUCCESS'), this.translate.instant('PARENTS.CHILD_LINKED_SUCCESS'), 'success');
           },
           error: () => {
             this.linkingChild = false;
-            Swal.fire('Error', 'Failed to link child', 'error');
+            Swal.fire(this.translate.instant('MESSAGES.ERROR'), this.translate.instant('PARENTS.FAILED_LINK_CHILD'), 'error');
           }
         });
       },
       error: () => {
         this.linkingChild = false;
-        Swal.fire('Error', 'Failed to load child details', 'error');
+        Swal.fire(this.translate.instant('MESSAGES.ERROR'), this.translate.instant('PARENTS.FAILED_LOAD_CHILD_DETAILS'), 'error');
       }
     });
   }
@@ -242,11 +290,11 @@ export class ParentDetail implements OnInit {
       next: () => {
         this.savingFee = false;
         this.showAddFee = false;
-        Swal.fire('Success', 'Fee added successfully!', 'success');
+        Swal.fire(this.translate.instant('MESSAGES.SUCCESS'), this.translate.instant('PARENTS.FEE_ADDED_SUCCESS'), 'success');
       },
       error: () => {
         this.savingFee = false;
-        Swal.fire('Error', 'Failed to add fee. Please try again.', 'error');
+        Swal.fire(this.translate.instant('MESSAGES.ERROR'), this.translate.instant('PARENTS.FEE_ADD_ERROR'), 'error');
       }
     });
   }
@@ -264,25 +312,25 @@ export class ParentDetail implements OnInit {
   }
   removeChildFromParent(childId: number, childName: string): void {
     if (!this.parent?.id) return;
-    
+
     Swal.fire({
-      title: 'Are you sure?',
-      text: `Do you want to remove ${childName} from this parent?`,
+      title: this.translate.instant('COMMON.ARE_YOU_SURE'),
+      text: this.translate.instant('PARENTS.REMOVE_CHILD_CONFIRM', { name: childName }),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#6c757d',
-      confirmButtonText: 'Yes, remove!',
-      cancelButtonText: 'Cancel'
+      confirmButtonText: this.translate.instant('COMMON.YES_REMOVE'),
+      cancelButtonText: this.translate.instant('COMMON.CANCEL')
     }).then((result) => {
       if (result.isConfirmed) {
         this.childrenService.deleteChild(childId).subscribe({
           next: () => {
             this.loadParentDetails(this.parent!.id!);
-            Swal.fire('Removed!', 'Child has been removed.', 'success');
+            Swal.fire(this.translate.instant('COMMON.REMOVED'), this.translate.instant('PARENTS.CHILD_REMOVED_SUCCESS'), 'success');
           },
           error: () => {
-            Swal.fire('Error', 'Failed to remove child', 'error');
+            Swal.fire(this.translate.instant('MESSAGES.ERROR'), this.translate.instant('PARENTS.FAILED_REMOVE_CHILD'), 'error');
           }
         });
       }
@@ -291,33 +339,46 @@ export class ParentDetail implements OnInit {
 
   toggleParentStatus(): void {
     if (!this.parent) return;
-    
-    const action = this.parent.isActive ? 'deactivate' : 'activate';
-    
+
+    const isActive = this.parent.isActive;
+    const actionText = isActive
+      ? this.translate.instant('PARENTS.DEACTIVATE_PARENT_CONFIRM')
+      : this.translate.instant('PARENTS.ACTIVATE_PARENT_CONFIRM');
+    const confirmText = isActive
+      ? this.translate.instant('PARENTS.YES_DEACTIVATE')
+      : this.translate.instant('PARENTS.YES_ACTIVATE');
+
     Swal.fire({
-      title: 'Are you sure?',
-      text: `Do you want to ${action} this parent?`,
+      title: this.translate.instant('COMMON.ARE_YOU_SURE'),
+      text: actionText,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
-      confirmButtonText: `Yes, ${action}!`
+      confirmButtonText: confirmText,
+      cancelButtonText: this.translate.instant('COMMON.CANCEL')
     }).then((result) => {
       if (result.isConfirmed) {
-        const request = this.parent!.isActive 
-          ? this.parentService.deactivateParent(this.parent!.id!) 
+        const request = this.parent!.isActive
+          ? this.parentService.deactivateParent(this.parent!.id!)
           : this.parentService.activateParent(this.parent!.id!);
-        
+
         request.subscribe({
           next: () => {
             if (this.parent) {
               this.parent.isActive = !this.parent.isActive;
               this.updateChildrenStatus(this.parent.isActive);
             }
-            Swal.fire('Success', `Parent ${action}d successfully!`, 'success');
+            const successMsg = isActive
+              ? this.translate.instant('PARENTS.PARENT_DEACTIVATED_SUCCESS')
+              : this.translate.instant('PARENTS.PARENT_ACTIVATED_SUCCESS');
+            Swal.fire(this.translate.instant('MESSAGES.SUCCESS'), successMsg, 'success');
           },
           error: () => {
-            Swal.fire('Error', `Failed to ${action} parent`, 'error');
+            const errorMsg = isActive
+              ? this.translate.instant('PARENTS.FAILED_DEACTIVATE_PARENT')
+              : this.translate.instant('PARENTS.FAILED_ACTIVATE_PARENT');
+            Swal.fire(this.translate.instant('MESSAGES.ERROR'), errorMsg, 'error');
           }
         });
       }
@@ -351,29 +412,28 @@ export class ParentDetail implements OnInit {
   getActions(): TitleAction[] {
     const actions: TitleAction[] = [
       {
-        label: 'Back',
+        label: this.translate.instant('COMMON.BACK'),
         icon: 'bi bi-arrow-left',
-        class: 'btn-outline-secondary',
+        class: 'btn-outline-secondary btn-cancel-global',
         action: () => this.goBack()
       }
     ];
 
     if (this.parent) {
-      actions.push({
-        label: 'Edit',
-        icon: 'bi bi-pencil-square me-2',
-        class: 'btn-primary',
-        action: () => this.editParent()
-      });
-
       if (this.isAdmin) {
         actions.push({
-          label: this.parent.isActive ? 'Deactivate' : 'Activate',
+          label: this.parent.isActive ? this.translate.instant('COMMON.DEACTIVATE') : this.translate.instant('COMMON.ACTIVATE'),
           icon: this.parent.isActive ? 'bi bi-pause-circle' : 'bi bi-play',
-          class: this.parent.isActive ? 'btn-warning' : 'btn-success',
+          class: this.parent.isActive ? 'btn-view-global-2' : 'btn-edit-global-2',
           action: () => this.toggleParentStatus()
         });
       }
+      actions.push({
+        label: this.translate.instant('COMMON.EDIT'),
+        icon: 'bi bi-pencil-square me-2',
+        class: 'btn-edit-global-2',
+        action: () => this.editParent()
+      });
     }
 
     return actions;

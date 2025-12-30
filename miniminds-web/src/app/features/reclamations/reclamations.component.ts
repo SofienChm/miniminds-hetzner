@@ -5,11 +5,14 @@ import { ReclamationsService, Reclamation, ReclamationUser } from './reclamation
 import { AuthService } from '../../core/services/auth';
 import { TitlePage } from "../../shared/layouts/title-page/title-page";
 import { ParentChildHeaderSimpleComponent } from '../../shared/components/parent-child-header-simple/parent-child-header-simple.component';
+import Swal from 'sweetalert2';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-reclamations',
   standalone: true,
-  imports: [CommonModule, FormsModule, TitlePage, ParentChildHeaderSimpleComponent],
+  imports: [CommonModule, FormsModule, ParentChildHeaderSimpleComponent, TranslateModule],
   templateUrl: './reclamations.component.html',
   styleUrls: ['./reclamations.component.scss']
 })
@@ -27,14 +30,20 @@ export class ReclamationsComponent implements OnInit, OnDestroy {
   };
   responseText = '';
   currentUserId = '';
-  activeTab: 'sent' | 'received' = 'received';
+  activeTab: 'inbox' | 'sent' | 'important' | 'trash' | null = 'inbox';
+  selectedReclamations: Reclamation[] = [];
+  statusFilter: 'all' | 'open' | 'resolved' = 'all';
+  showFilterMenu = false;
 
   constructor(
     private reclamationsService: ReclamationsService,
-    public authService: AuthService
+    public authService: AuthService,
+    private pageTitleService: PageTitleService,
+    private translateService: TranslateService
   ) {}
 
   ngOnInit(): void {
+    this.pageTitleService.setTitle(this.translateService.instant('RECLAMATIONS_PAGE.TITLE'));
     this.currentUserId = this.getCurrentUserId();
     this.loadUsers();
     this.loadReclamations();
@@ -96,19 +105,58 @@ export class ReclamationsComponent implements OnInit, OnDestroy {
   selectReclamation(reclamation: Reclamation): void {
     this.selectedReclamation = reclamation;
     this.showModal = true;
+    this.showNewReclamationModal = false;
+    this.activeTab = null;
   }
 
   closeModal(): void {
     this.showModal = false;
     this.selectedReclamation = null;
+    this.activeTab = 'inbox';
   }
 
   openNewReclamationModal(): void {
     this.showNewReclamationModal = true;
+    this.showModal = false;
+    this.selectedReclamation = null;
+    this.activeTab = null;
   }
 
   closeNewReclamationModal(): void {
-    this.showNewReclamationModal = false;
+    if (this.hasFormData()) {
+      Swal.fire({
+        title: this.translateService.instant('RECLAMATIONS_PAGE.UNSAVED_DATA_TITLE'),
+        text: this.translateService.instant('RECLAMATIONS_PAGE.UNSAVED_DATA_CLOSE_TEXT'),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#0e567d',
+        cancelButtonColor: '#e5e7eb',
+        confirmButtonText: this.translateService.instant('RECLAMATIONS_PAGE.YES_CLOSE'),
+        cancelButtonText: this.translateService.instant('RECLAMATIONS_PAGE.CANCEL'),
+        customClass: {
+          confirmButton: 'swal-confirm-btn',
+          cancelButton: 'swal-cancel-btn'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.resetForm();
+          this.showNewReclamationModal = false;
+          this.activeTab = 'inbox';
+        }
+      });
+    } else {
+      this.showNewReclamationModal = false;
+      this.activeTab = 'inbox';
+    }
+  }
+
+  hasFormData(): boolean {
+    return this.newReclamation.subject.trim() !== '' || this.newReclamation.content.trim() !== '';
+  }
+
+  resetForm(): void {
+    this.newReclamation.subject = '';
+    this.newReclamation.content = '';
   }
 
   send(): void {
@@ -130,13 +178,26 @@ export class ReclamationsComponent implements OnInit, OnDestroy {
     this.reclamationsService.sendReclamation(recipientId, subject, content).subscribe({
       next: () => {
         console.log('Reclamation sent successfully');
-        this.newReclamation.subject = '';
-        this.newReclamation.content = '';
+        this.resetForm();
         this.loadReclamations();
-        this.autoSelectAdminForParents();
         this.closeNewReclamationModal();
+
+        Swal.fire({
+          icon: 'success',
+          title: this.translateService.instant('RECLAMATIONS_PAGE.SUCCESS'),
+          text: this.translateService.instant('RECLAMATIONS_PAGE.RECLAMATION_SENT_SUCCESS'),
+          confirmButtonColor: '#0E567D'
+        });
       },
-      error: (err) => console.error('Error sending reclamation:', err)
+      error: (err) => {
+        console.error('Error sending reclamation:', err);
+        Swal.fire({
+          icon: 'error',
+          title: this.translateService.instant('RECLAMATIONS_PAGE.ERROR'),
+          text: this.translateService.instant('RECLAMATIONS_PAGE.RECLAMATION_SEND_FAILED'),
+          confirmButtonColor: '#0E567D'
+        });
+      }
     });
   }
 
@@ -170,14 +231,144 @@ export class ReclamationsComponent implements OnInit, OnDestroy {
     return user ? user.name : 'Unknown User';
   }
 
-  switchTab(tab: 'sent' | 'received'): void {
-    this.activeTab = tab;
+  switchTab(tab: 'inbox' | 'sent' | 'important' | 'trash'): void {
+    if (this.showNewReclamationModal && this.hasFormData()) {
+      Swal.fire({
+        title: this.translateService.instant('RECLAMATIONS_PAGE.UNSAVED_DATA_TITLE'),
+        text: this.translateService.instant('RECLAMATIONS_PAGE.UNSAVED_DATA_TEXT'),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#0e567d',
+        cancelButtonColor: '#e5e7eb',
+        confirmButtonText: this.translateService.instant('RECLAMATIONS_PAGE.YES_LEAVE'),
+        cancelButtonText: this.translateService.instant('RECLAMATIONS_PAGE.CANCEL'),
+        customClass: {
+          confirmButton: 'swal-confirm-btn',
+          cancelButton: 'swal-cancel-btn'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.resetForm();
+          this.activeTab = tab;
+          this.showNewReclamationModal = false;
+          this.showModal = false;
+          this.selectedReclamation = null;
+        }
+      });
+    } else {
+      this.activeTab = tab;
+      this.showNewReclamationModal = false;
+      this.showModal = false;
+      this.selectedReclamation = null;
+    }
   }
   get isParent(): boolean {
       return this.authService.isParent();
   }
 
   get activeReclamations(): Reclamation[] {
-    return this.activeTab === 'sent' ? this.sentReclamations : this.receivedReclamations;
+    let reclamations: Reclamation[] = [];
+    switch(this.activeTab) {
+      case 'inbox': reclamations = this.receivedReclamations; break;
+      case 'sent': reclamations = this.sentReclamations; break;
+      case 'important': reclamations = []; break;
+      case 'trash': reclamations = []; break;
+      default: reclamations = [];
+    }
+    return this.filterByStatus(reclamations);
+  }
+
+  filterByStatus(reclamations: Reclamation[]): Reclamation[] {
+    if (this.statusFilter === 'all') return reclamations;
+    if (this.statusFilter === 'open') return reclamations.filter(r => !r.isResolved);
+    if (this.statusFilter === 'resolved') return reclamations.filter(r => r.isResolved);
+    return reclamations;
+  }
+
+  onFilterChange(): void {
+    this.selectedReclamations = [];
+  }
+
+  toggleFilterMenu(): void {
+    this.showFilterMenu = !this.showFilterMenu;
+  }
+
+  setFilter(filter: 'all' | 'open' | 'resolved'): void {
+    this.statusFilter = filter;
+    this.showFilterMenu = false;
+    this.onFilterChange();
+  }
+
+  toggleSelection(reclamation: Reclamation): void {
+    const index = this.selectedReclamations.findIndex(r => r.id === reclamation.id);
+    if (index > -1) {
+      this.selectedReclamations.splice(index, 1);
+    } else {
+      this.selectedReclamations.push(reclamation);
+    }
+  }
+
+  isSelected(reclamation: Reclamation): boolean {
+    return this.selectedReclamations.some(r => r.id === reclamation.id);
+  }
+
+  toggleSelectAll(event: any): void {
+    if (event.target.checked) {
+      this.selectedReclamations = [...this.activeReclamations];
+    } else {
+      this.selectedReclamations = [];
+    }
+  }
+
+  isAllSelected(): boolean {
+    return this.activeReclamations.length > 0 && this.selectedReclamations.length === this.activeReclamations.length;
+  }
+
+  deleteSelected(): void {
+    if (this.selectedReclamations.length === 0) return;
+    Swal.fire({
+      title: this.translateService.instant('RECLAMATIONS_PAGE.DELETE_RECLAMATIONS_TITLE'),
+      text: this.translateService.instant('RECLAMATIONS_PAGE.DELETE_RECLAMATIONS_TEXT', { count: this.selectedReclamations.length }),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#0e567d',
+      cancelButtonColor: '#e5e7eb',
+      confirmButtonText: this.translateService.instant('RECLAMATIONS_PAGE.YES_DELETE'),
+      cancelButtonText: this.translateService.instant('RECLAMATIONS_PAGE.CANCEL'),
+      customClass: {
+        confirmButton: 'swal-confirm-btn',
+        cancelButton: 'swal-cancel-btn'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // TODO: Implement delete API call
+        console.log('Deleting:', this.selectedReclamations);
+        this.selectedReclamations = [];
+      }
+    });
+  }
+
+  markAsResolved(): void {
+    if (this.selectedReclamations.length === 0) return;
+    this.selectedReclamations.forEach(reclamation => {
+      if (reclamation.id) {
+        this.reclamationsService.resolveReclamation(reclamation.id, 'Marked as resolved').subscribe({
+          next: () => {
+            reclamation.isResolved = true;
+            this.loadReclamations();
+          },
+          error: (err) => console.error('Error resolving reclamation:', err)
+        });
+      }
+    });
+    this.selectedReclamations = [];
+  }
+
+  markAsOpen(): void {
+    if (this.selectedReclamations.length === 0) return;
+    // TODO: Implement mark as open API call
+    console.log('Marking as open:', this.selectedReclamations);
+    this.selectedReclamations.forEach(r => r.isResolved = false);
+    this.selectedReclamations = [];
   }
 }

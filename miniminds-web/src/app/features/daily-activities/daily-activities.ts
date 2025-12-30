@@ -2,6 +2,8 @@ import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy, Cha
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DailyActivityService } from './daily-activity.service';
 import { ChildrenService } from '../children/children.service';
 import { DailyActivity, ActivityTemplate } from './daily-activity.interface';
@@ -11,10 +13,12 @@ import { BaseChartDirective } from 'ng2-charts';
 import type { ChartConfiguration } from 'chart.js';
 import { Location } from '@angular/common';
 import { ParentChildHeaderComponent } from '../../shared/components/parent-child-header/parent-child-header.component';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-daily-activities',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TitlePage, BaseChartDirective, ParentChildHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NgSelectModule, TranslateModule, TitlePage, BaseChartDirective, ParentChildHeaderComponent],
   templateUrl: './daily-activities.html',
   styleUrls: ['./daily-activities.scss']
 })
@@ -50,16 +54,9 @@ export class DailyActivities implements OnInit, AfterViewInit, OnDestroy {
   
 
 
-  activityTemplates: ActivityTemplate[] = [
-    { type: 'Nap', icon: 'bi-moon-stars', color: 'primary', label: 'Nap Time', defaultDuration: 60 },
-    { type: 'Meal', icon: 'bi-egg-fried', color: 'success', label: 'Meal', requiresFood: true },
-    { type: 'Snack', icon: 'bi-cup-hot', color: 'warning', label: 'Snack', requiresFood: true },
-    { type: 'Play', icon: 'bi-controller', color: 'info', label: 'Play Time', defaultDuration: 30 },
-    { type: 'Diaper', icon: 'bi-baby', color: 'secondary', label: 'Diaper Change' },
-    { type: 'Outdoor', icon: 'bi-tree', color: 'success', label: 'Outdoor Activity', defaultDuration: 45 },
-    { type: 'Learning', icon: 'bi-book', color: 'primary', label: 'Learning', defaultDuration: 30 },
-    { type: 'Bathroom', icon: 'bi-toilet', color: 'info', label: 'Bathroom' }
-  ];
+  activityTemplates: ActivityTemplate[] = [];
+  private langChangeSub?: Subscription;
+
   back() {
     this.location.back();
   }
@@ -72,13 +69,36 @@ export class DailyActivities implements OnInit, AfterViewInit, OnDestroy {
     private childrenService: ChildrenService,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
-    private location: Location
+    private location: Location,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit() {
+    this.pageTitleService.setTitle(this.translate.instant('DAILY_REPORT.TITLE'));
     this.userRole = this.authService.getUserRole();
+    this.initActivityTemplates();
     this.loadChildren();
     this.loadActivities();
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.pageTitleService.setTitle(this.translate.instant('DAILY_REPORT.TITLE'));
+      this.initActivityTemplates();
+      this.cdr.detectChanges();
+    });
+  }
+
+  private initActivityTemplates(): void {
+    this.activityTemplates = [
+      { type: 'Nap', icon: 'bi-moon-stars', color: 'primary', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.NAP'), defaultDuration: 60 },
+      { type: 'Meal', icon: 'bi-egg-fried', color: 'success', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.MEAL'), requiresFood: true },
+      { type: 'Snack', icon: 'bi-cup-hot', color: 'warning', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.SNACK'), requiresFood: true },
+      { type: 'Play', icon: 'bi-controller', color: 'info', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.PLAY'), defaultDuration: 30 },
+      { type: 'Diaper', icon: 'bi-table', color: 'secondary', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.DIAPER') },
+      { type: 'Outdoor', icon: 'bi-tree', color: 'success', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.OUTDOOR'), defaultDuration: 45 },
+      { type: 'Learning', icon: 'bi-book', color: 'primary', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.LEARNING'), defaultDuration: 30 },
+      { type: 'Bathroom', icon: 'bi-badge-wc', color: 'info', label: this.translate.instant('DAILY_REPORT.ACTIVITY_TYPES.BATHROOM') }
+    ];
   }
   
   ngAfterViewInit() {
@@ -228,8 +248,8 @@ export class DailyActivities implements OnInit, AfterViewInit, OnDestroy {
       datasets: [{
         data: Object.values(activityCounts),
         backgroundColor: [
-          '#202c4b', // Primary
-          '#feccfd', // Secondary  
+          '#7dd3c0', // Primary
+          '#7db9ff ', // Secondary  
           '#cdeaf0', // Accent
           '#10b981', // Green
           '#f59e0b', // Yellow
@@ -248,8 +268,8 @@ export class DailyActivities implements OnInit, AfterViewInit, OnDestroy {
       datasets: [{
         label: 'Activities',
         data: timelineData.data,
-        borderColor: '#202c4b',
-        backgroundColor: 'rgba(32, 44, 75, 0.1)',
+        borderColor: '#7dd3c0',
+        backgroundColor: '#7dd3c01a',
         fill: true,
         tension: 0.4
       }]
@@ -423,6 +443,7 @@ export class DailyActivities implements OnInit, AfterViewInit, OnDestroy {
   }
   
   ngOnDestroy() {
+    this.langChangeSub?.unsubscribe();
     // Charts are handled by ng2-charts
   }
 }

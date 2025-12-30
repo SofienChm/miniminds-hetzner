@@ -1,7 +1,14 @@
+import Swal from 'sweetalert2';
+
 export class ExportUtil {
   static async exportToPDF(data: any[], title: string): Promise<void> {
     if (data.length === 0) {
-      alert('No data to export');
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'No data to export',
+        confirmButtonColor: '#7dd3c0'
+      });
       return;
     }
 
@@ -26,7 +33,12 @@ export class ExportUtil {
 
   static async exportToExcel(data: any[], title: string): Promise<void> {
     if (data.length === 0) {
-      alert('No data to export');
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'No data to export',
+        confirmButtonColor: '#7dd3c0'
+      });
       return;
     }
 

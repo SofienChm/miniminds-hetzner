@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import Swal from 'sweetalert2';
 
 interface Game {
   id: string;
@@ -170,7 +171,13 @@ export class LearningGamesComponent implements OnInit {
         this.startStoryGame();
         break;
       default:
-        alert(`Starting ${game.title}!`);
+        Swal.fire({
+          icon: 'info',
+          title: 'Game Starting',
+          text: `Starting ${game.title}!`,
+          timer: 1500,
+          showConfirmButton: false
+        });
     }
   }
 
@@ -225,18 +232,35 @@ export class LearningGamesComponent implements OnInit {
   submitAnswer(): void {
     if (this.userAnswer === this.mathQuestion.answer) {
       this.score += 10;
-      alert('Correct! Well done! 🎉');
+      Swal.fire({
+        icon: 'success',
+        title: 'Correct! 🎉',
+        text: 'Well done!',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } else {
-      alert(`Not quite! The answer is ${this.mathQuestion.answer}. Try the next one! 💪`);
+      Swal.fire({
+        icon: 'info',
+        title: 'Not quite! 💪',
+        text: `The answer is ${this.mathQuestion.answer}. Try the next one!`,
+        timer: 2000,
+        showConfirmButton: false
+      });
     }
-    
+
     this.generateMathQuestion();
   }
 
   endGame(): void {
     this.gameStarted = false;
     this.currentGame = null;
-    alert(`Game finished! Your final score: ${this.score} points! 🏆`);
+    Swal.fire({
+      icon: 'success',
+      title: 'Game Finished! 🏆',
+      text: `Your final score: ${this.score} points!`,
+      confirmButtonColor: '#7dd3c0'
+    });
   }
   
   generateLetterQuestion(): void {
@@ -259,9 +283,21 @@ export class LearningGamesComponent implements OnInit {
     this.selectedLetter = letter;
     if (letter === this.currentLetter) {
       this.score += 10;
-      alert('Correct! Great job! 🎉');
+      Swal.fire({
+        icon: 'success',
+        title: 'Correct! 🎉',
+        text: 'Great job!',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } else {
-      alert(`Not quite! The correct letter is ${this.currentLetter}. Try again! 💪`);
+      Swal.fire({
+        icon: 'info',
+        title: 'Not quite! 💪',
+        text: `The correct letter is ${this.currentLetter}. Try again!`,
+        timer: 2000,
+        showConfirmButton: false
+      });
     }
     setTimeout(() => this.generateLetterQuestion(), 1000);
   }
@@ -284,7 +320,13 @@ export class LearningGamesComponent implements OnInit {
   
   mixColors(): void {
     this.score += 15;
-    alert(`Great! ${this.color1} + ${this.color2} = ${this.mixedColor}! 🎨`);
+    Swal.fire({
+      icon: 'success',
+      title: 'Great! 🎨',
+      text: `${this.color1} + ${this.color2} = ${this.mixedColor}!`,
+      timer: 2000,
+      showConfirmButton: false
+    });
     setTimeout(() => this.generateColorMix(), 1000);
   }
   
@@ -303,7 +345,13 @@ export class LearningGamesComponent implements OnInit {
   }
   
   playMelody(): void {
-    alert(`Playing melody: ${this.melody.join(' - ')} 🎵`);
+    Swal.fire({
+      icon: 'info',
+      title: 'Playing Melody 🎵',
+      text: this.melody.join(' - '),
+      timer: 2000,
+      showConfirmButton: false
+    });
     this.score += 20;
   }
   

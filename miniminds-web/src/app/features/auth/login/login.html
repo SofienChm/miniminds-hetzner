@@ -23,9 +23,9 @@
         <img src="/assets/images/icon.png" class="img-fluid" alt="">
         <h3>Miniminds</h3>
       </div>
-      <div class="form col-10 form-login_mobile mb-4">
+      <div class="form col-11 form-login_mobile mb-4">
         <div class="card shadow-lg">
-          <div class="card-body p-5">
+          <div class="card-body p-4">
 
             <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
               {{ errorMessage }}
@@ -48,7 +48,7 @@
               <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input 
-                  type="password" 
+                  [type]="showPassword ? 'text' : 'password'" 
                   class="form-control" 
                   id="password" 
                   name="password"
@@ -137,13 +137,13 @@
             <div class="input-with-icon">
               <i class="bi bi-lock input-icon"></i>
               <input 
-                type="password" 
+                [type]="showPassword ? 'text' : 'password'" 
                 class="form-input" 
                 name="password"
                 [(ngModel)]="credentials.password" 
                 required
                 placeholder="Enter your password">
-              <i class="bi bi-eye-slash toggle-password"></i>
+              <i [class]="showPassword ? 'bi bi-eye toggle-password' : 'bi bi-eye-slash toggle-password'" (click)="togglePasswordVisibility()" style="cursor: pointer;"></i>
             </div>
           </div>
 

@@ -14,12 +14,13 @@
     </div>
     <div *ngIf="showImages" class="d-flex image-name row_direction">
       <div class="d-flex image-active">
-        <img [src]="children[currentChildIndex]?.profilePicture || 'assets/default-avatar.svg'" 
+        <img [src]="children[currentChildIndex]?.profilePicture || 'assets/child.png'" 
              [alt]="children[currentChildIndex]?.firstName" 
-             class="rounded-circle">
+             class="img-fluid">
       </div>
       <div class="overflow-hidden">
         <h5 class="name">{{ children[currentChildIndex]?.firstName }} {{ children[currentChildIndex]?.lastName }}</h5>
+        <p class="age" *ngIf="children[currentChildIndex]?.dateOfBirth">{{ getAge(children[currentChildIndex]?.dateOfBirth) }} years old</p>
         <div class="slider-controls" *ngIf="children.length > 1">
           <button class="btn btn-sm btn-outline-secondary" (click)="onPrevChild.emit()" [disabled]="currentChildIndex === 0">
             <i class="bi bi-chevron-left"></i>

@@ -28,7 +28,7 @@ export interface AIResponse {
   providedIn: 'root'
 })
 export class AIAssistantService {
-  private apiUrl = `${environment.apiUrl}/api/AIAssistant`;
+  private apiUrl = `${environment.apiUrl}/AIAssistant`;
   private messagesSubject = new BehaviorSubject<AIMessage[]>([]);
   public messages$ = this.messagesSubject.asObservable();
 

@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable, tap, of, catchError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Notification } from '../interfaces/notification.interface';
-import { ApiConfig } from '../config/api.config';
+import { ApiConfig } from '../../core/config/api.config';
 import { PushNotificationService } from './push-notification.service';
 import * as signalR from '@microsoft/signalr';
 

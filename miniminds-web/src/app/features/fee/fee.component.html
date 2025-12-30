@@ -1,6 +1,6 @@
 <div *ngIf="isParent" class="parent-detailchild font-inter">
   <app-parent-child-header-simple *ngIf="isParent"
-    title="Fee Management"
+    [title]="'FEES_PAGE.TITLE' | translate"
   >
   </app-parent-child-header-simple>
   <div class="body container-fluid">
@@ -16,9 +16,9 @@
                   </div>
                 </div>
                 <div class="flex-grow-1 ms-3">
-                  <h6 class="mb-0 total">Total Fees</h6>
-                  <h4 class="mb-0 spent">${{ summary.totalAmount | number:'1.2-2' }}</h4>
-                  <small class="text-muted number">{{ summary.totalFees }} fees</small>
+                  <h6 class="mb-0 total">{{ 'FEES_PAGE.TOTAL_FEES' | translate }}</h6>
+                  <h4 class="mb-0 spent">{{ summary.totalAmount | appCurrency }}</h4>
+                  <small class="text-muted number">{{ summary.totalFees }} {{ 'FEES_PAGE.FEES' | translate }}</small>
                 </div>
               </div>
             </div>
@@ -34,9 +34,9 @@
                     </div>
                   </div>
                   <div class="flex-grow-1 ms-3">
-                    <h6 class="mb-0 total">Paid</h6>
-                    <h4 class="mb-0 spent">${{ summary.paidAmount | number:'1.2-2' }}</h4>
-                    <small class="text-muted number">{{ summary.paidFees }} fees</small>
+                    <h6 class="mb-0 total">{{ 'FEES_PAGE.PAID' | translate }}</h6>
+                    <h4 class="mb-0 spent">{{ summary.paidAmount | appCurrency }}</h4>
+                    <small class="text-muted number">{{ summary.paidFees }} {{ 'FEES_PAGE.FEES' | translate }}</small>
                   </div>
                 </div>
               </div>
@@ -52,9 +52,9 @@
                     </div>
                   </div>
                   <div class="flex-grow-1 ms-3">
-                    <h6 class="mb-0 total">Pending</h6>
-                    <h4 class="mb-0 spent">${{ summary.pendingAmount | number:'1.2-2' }}</h4>
-                    <small class="text-muted number">{{ summary.pendingFees }} fees</small>
+                    <h6 class="mb-0 total">{{ 'FEES_PAGE.PENDING' | translate }}</h6>
+                    <h4 class="mb-0 spent">{{ summary.pendingAmount | appCurrency }}</h4>
+                    <small class="text-muted number">{{ summary.pendingFees }} {{ 'FEES_PAGE.FEES' | translate }}</small>
                   </div>
                 </div>
               </div>
@@ -70,9 +70,9 @@
                     </div>
                   </div>
                   <div class="flex-grow-1 ms-3">
-                    <h6 class="mb-0 total">Overdue</h6>
-                    <h4 class="mb-0 spent">${{ summary.overdueAmount | number:'1.2-2' }}</h4>
-                    <small class="text-muted number">{{ summary.overdueFees }} fees</small>
+                    <h6 class="mb-0 total">{{ 'FEES_PAGE.OVERDUE' | translate }}</h6>
+                    <h4 class="mb-0 spent">{{ summary.overdueAmount | appCurrency }}</h4>
+                    <small class="text-muted number">{{ summary.overdueFees }} {{ 'FEES_PAGE.FEES' | translate }}</small>
                   </div>
                 </div>
               </div>
@@ -84,8 +84,8 @@
 </div>
 <div class="container-fluid mt-4">
   <app-title-page *ngIf="!isParent"
-    title="Fee Management" 
-    subtitle="Manage monthly fees and payments intelligently"
+    [title]="'FEES_PAGE.TITLE' | translate"
+    [subtitle]="'FEES_PAGE.SUBTITLE' | translate"
     icon="bi bi-currency-dollar"
     [breadcrumbs]="breadcrumbs"
     [actions]="titleActions">
@@ -94,73 +94,53 @@
   <!-- Summary Cards -->
   <div class="row mb-4" *ngIf="summary && !isParent">
     <div class="col-xl-3 col-md-6 col-6 mb-3">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-              <div class="bg-primary bg-opacity-10 rounded-3 p-3">
-                <i class="bi bi-currency-dollar text-primary fs-4"></i>
-              </div>
-            </div>
-            <div class="flex-grow-1 ms-3">
-              <h6 class="mb-0">Total Fees</h6>
-              <h4 class="mb-0">${{ summary.totalAmount | number:'1.2-2' }}</h4>
-              <small class="text-muted">{{ summary.totalFees }} fees</small>
-            </div>
+      <div class="card stat-card shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center p-3">
+          <div class="stat-content">
+            <p class="mb-0">{{ 'FEES_PAGE.TOTAL_FEES' | translate }}</p>
+            <h5 class="stat-number">{{ summary.totalAmount | appCurrency }}</h5>
+          </div>
+          <div class="stat-icon-wrapper me-3">
+            <i class="bi bi-currency-dollar"></i>
           </div>
         </div>
       </div>
     </div>
     <div class="col-xl-3 col-md-6 col-6 mb-3">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-              <div class="bg-success bg-opacity-10 rounded-3 p-3">
-                <i class="bi bi-check-circle text-success fs-4"></i>
-              </div>
-            </div>
-            <div class="flex-grow-1 ms-3">
-              <h6 class="mb-0">Paid</h6>
-              <h4 class="mb-0">${{ summary.paidAmount | number:'1.2-2' }}</h4>
-              <small class="text-muted">{{ summary.paidFees }} fees</small>
-            </div>
+      <div class="card stat-card shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center p-3">
+          <div class="stat-content">
+            <p class="mb-0">{{ 'FEES_PAGE.PAID' | translate }}</p>
+            <h5 class="stat-number">{{ summary.paidAmount | appCurrency }}</h5>
+          </div>
+          <div class="stat-icon-wrapper me-3">
+            <i class="bi bi-check-circle"></i>
           </div>
         </div>
       </div>
     </div>
     <div class="col-xl-3 col-md-6 col-6 mb-3">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-              <div class="bg-warning bg-opacity-10 rounded-3 p-3">
-                <i class="bi bi-clock text-warning fs-4"></i>
-              </div>
-            </div>
-            <div class="flex-grow-1 ms-3">
-              <h6 class="mb-0">Pending</h6>
-              <h4 class="mb-0">${{ summary.pendingAmount | number:'1.2-2' }}</h4>
-              <small class="text-muted">{{ summary.pendingFees }} fees</small>
-            </div>
+      <div class="card stat-card shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center p-3">
+          <div class="stat-content">
+            <p class="mb-0">{{ 'FEES_PAGE.PENDING' | translate }}</p>
+            <h5 class="stat-number">{{ summary.pendingAmount | appCurrency }}</h5>
+          </div>
+          <div class="stat-icon-wrapper me-3">
+            <i class="bi bi-clock text"></i>
           </div>
         </div>
       </div>
     </div>
     <div class="col-xl-3 col-md-6 col-6 mb-3">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-              <div class="bg-danger bg-opacity-10 rounded-3 p-3">
-                <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
-              </div>
-            </div>
-            <div class="flex-grow-1 ms-3">
-              <h6 class="mb-0">Overdue</h6>
-              <h4 class="mb-0">${{ summary.overdueAmount | number:'1.2-2' }}</h4>
-              <small class="text-muted">{{ summary.overdueFees }} fees</small>
-            </div>
+      <div class="card stat-card shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center p-3">
+          <div class="stat-content">
+            <p class="mb-0">{{ 'FEES_PAGE.OVERDUE' | translate }}</p>
+            <h5 class="stat-number">{{ summary.overdueAmount | appCurrency }}</h5>
+          </div>
+          <div class="stat-icon-wrapper me-3">
+            <i class="bi bi-exclamation-triangle"></i>
           </div>
         </div>
       </div>
@@ -168,41 +148,64 @@
   </div>
 
   <!-- Filters -->
-  <div class="card mb-4" *ngIf="!isParent">
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label">Search</label>
-          <input type="text" class="form-control" placeholder="Search by child, parent, or description" [(ngModel)]="searchTerm">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Status</label>
-          <select class="form-select" [(ngModel)]="filterStatus">
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="overdue">Overdue</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Child</label>
-          <select class="form-select" [(ngModel)]="filterChild">
-            <option value="all">All Children</option>
-            <option *ngFor="let child of children" [value]="child.id">{{ child.firstName }} {{ child.lastName }}</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Export</label>
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" (click)="toggleExportDropdown()">
-              <i class="bi bi-download me-2"></i>Export
-            </button>
-            <ul class="dropdown-menu" [class.show]="showExportDropdown">
-              <li><button class="dropdown-item" (click)="exportAsPDF()"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</button></li>
-              <li><button class="dropdown-item" (click)="exportAsExcel()"><i class="bi bi-file-earmark-excel me-2"></i>Excel</button></li>
-            </ul>
+  <div class="bg-white p-3 border d-flex align-items-center justify-content-between flex-wrap mb-4 rounded-1" *ngIf="!isParent">
+    <h4 class="title-filter">{{ 'FEES_PAGE.TITLE' | translate }}</h4>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+      <!-- Search Input -->
+      <div class="search-box">
+        <i class="bi bi-search search-icon"></i>
+        <input
+          type="text"
+          class="form-control search-input"
+          [placeholder]="'FEES_PAGE.SEARCH_PLACEHOLDER' | translate"
+          [(ngModel)]="searchTerm">
+      </div>
+
+      <!-- Status Filter -->
+      <ng-select
+        class="filter-select"
+        [(ngModel)]="filterStatus"
+        [items]="statusOptions"
+        bindLabel="label"
+        bindValue="value"
+        [placeholder]="'FEES_PAGE.FILTER_BY_STATUS' | translate"
+        [clearable]="false"
+        [searchable]="false">
+        <ng-template ng-option-tmp let-item="item">
+          <div class="option-with-image">
+            <i class="bi {{item.icon}}" style="font-size: 16px; color: #7dd3c0;"></i>
+            <span class="option-title">{{ item.label }}</span>
           </div>
-        </div>
+        </ng-template>
+      </ng-select>
+
+      <!-- Child Filter -->
+      <ng-select
+        class="filter-select"
+        [(ngModel)]="filterChild"
+        [items]="childOptions"
+        bindLabel="label"
+        bindValue="value"
+        [placeholder]="'FEES_PAGE.FILTER_BY_CHILD' | translate"
+        [clearable]="false"
+        [searchable]="true">
+        <ng-template ng-option-tmp let-item="item">
+          <div class="option-with-image">
+            <i class="bi {{item.icon}}" style="font-size: 16px; color: #7dd3c0;"></i>
+            <span class="option-title">{{ item.label }}</span>
+          </div>
+        </ng-template>
+      </ng-select>
+
+      <!-- Export Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle" type="button" (click)="toggleExportDropdown()">
+          <i class="bi bi-download me-2"></i>{{ 'FEES_PAGE.EXPORT' | translate }}
+        </button>
+        <ul class="dropdown-menu" [class.show]="showExportDropdown">
+          <li><button class="dropdown-item" (click)="exportAsPDF()"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</button></li>
+          <li><button class="dropdown-item" (click)="exportAsExcel()"><i class="bi bi-file-earmark-excel me-2"></i>Excel</button></li>
+        </ul>
       </div>
     </div>
   </div>
@@ -210,7 +213,7 @@
   <!-- Loading -->
   <div *ngIf="loading" class="text-center py-5">
     <div class="spinner-border" role="status">
-      <span class="visually-hidden">Loading...</span>
+      <span class="visually-hidden">{{ 'FEES_PAGE.LOADING' | translate }}</span>
     </div>
   </div>
 
@@ -219,100 +222,77 @@
     <div class="card-body">
       <div *ngIf="filteredFees.length === 0" class="text-center p-4">
         <i class="bi bi-currency-dollar fs-1 text-muted"></i>
-        <h4 class="mt-3">No Fees Found</h4>
-        <p class="text-muted">{{ fees.length === 0 ? 'Start by adding a new fee or creating monthly fees for all children.' : 'Try adjusting your filters.' }}</p>
+        <h4 class="mt-3">{{ 'FEES_PAGE.NO_FEES_FOUND' | translate }}</h4>
+        <p class="text-muted">{{ fees.length === 0 ? ('FEES_PAGE.NO_FEES_MESSAGE' | translate) : ('FEES_PAGE.ADJUST_FILTERS' | translate) }}</p>
       </div>
 
-      <div *ngIf="filteredFees.length > 0" class="table-responsive">
+      <div *ngIf="filteredFees.length > 0" class="table-responsive custom-table">
         <table class="table table-hover">
           <thead>
             <tr>
-              <th>Child</th>
-              <th>Parent</th>
-              <th>Description</th>
-              <th>Amount</th>
-              <th>Due Date</th>
-              <th>Status</th>
-              <th>Type</th>
-              <th>Actions</th>
+              <th>{{ 'FEES_PAGE.CHILD' | translate }}</th>
+              <th>{{ 'FEES_PAGE.PARENT' | translate }}</th>
+              <th>{{ 'FEES_PAGE.AMOUNT' | translate }}</th>
+              <th>{{ 'FEES_PAGE.DUE_DATE' | translate }}</th>
+              <th>{{ 'FEES_PAGE.STATUS' | translate }}</th>
+              <th>{{ 'FEES_PAGE.TYPE' | translate }}</th>
+              <th>{{ 'FEES_PAGE.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let fee of filteredFees">
-              <td>
-                <div class="d-flex align-items-center">
-                  <div class="flex-grow-1">
-                    <div class="fw-medium">{{ fee.childName }}</div>
-                  </div>
-                </div>
+              <td class="name-last">
+                {{ fee.childName }}
               </td>
               <td>
-                <div>
-                  <div class="fw-medium">{{ fee.parentName }}</div>
-                  <small class="text-muted">{{ fee.parentEmail }}</small>
-                </div>
+                {{ fee.parentName }}
               </td>
               <td>
-                <div>{{ fee.description }}</div>
-                <small class="text-muted" *ngIf="fee.notes">{{ fee.notes }}</small>
-              </td>
-              <td>
-                <span class="fw-bold">${{ fee.amount | number:'1.2-2' }}</span>
+                <span class="fw-bold">{{ fee.amount | appCurrency }}</span>
               </td>
               <td>
                 <div>{{ fee.dueDate | date:'mediumDate' }}</div>
                 <small class="text-danger" *ngIf="fee.daysOverdue && fee.daysOverdue > 0">
-                  {{ fee.daysOverdue }} days overdue
+                  {{ fee.daysOverdue }} {{ 'FEES_PAGE.DAYS_OVERDUE' | translate }}
                 </small>
               </td>
               <td>
                 <span [class]="getStatusClass(fee.status)">{{ fee.status | titlecase }}</span>
                 <div *ngIf="fee.paidDate" class="small text-muted mt-1">
-                  Paid: {{ fee.paidDate | date:'shortDate' }}
+                  {{ 'FEES_PAGE.PAID_DATE' | translate }}: {{ fee.paidDate | date:'shortDate' }}
                 </div>
               </td>
               <td>
                 <span [class]="getFeeTypeClass(fee.feeType)">{{ fee.feeType | titlecase }}</span>
               </td>
               <td>
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    Actions
+
+                <div class="d-flex gap-1" >
+                  <button type="button" class="btn btn-sm btn-view" (click)="navigateToDetail(fee.id!)" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover" [title]="'FEES_PAGE.VIEW_DETAILS' | translate">
+                    <i class="bi bi-eye"></i>
                   </button>
-                  <ul class="dropdown-menu">
-                    <li>
-                      <button class="dropdown-item" (click)="navigateToDetail(fee.id!)">
-                        <i class="bi bi-eye me-2"></i>View Detail
-                      </button>
-                    </li>
-                    <li *ngIf="canEdit()">
-                      <button class="dropdown-item" (click)="navigateToEdit(fee.id!)">
-                        <i class="bi bi-pencil me-2"></i>Edit
-                      </button>
-                    </li>
-                    <li *ngIf="fee.status !== 'paid' && canEdit()">
-                      <button class="dropdown-item" (click)="openPaymentModal(fee)">
-                        <i class="bi bi-credit-card me-2"></i>Mark as Paid
-                      </button>
-                    </li>
-                    <li *ngIf="canEdit()">
-                      <button class="dropdown-item text-danger" (click)="deleteFee(fee)">
-                        <i class="bi bi-trash me-2"></i>Delete
-                      </button>
-                    </li>
-                  </ul>
+                  <button type="button" class="btn btn-sm btn-edit" (click)="navigateToEdit(fee.id!)" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover" [title]="'FEES_PAGE.EDIT_FEE' | translate">
+                    <i class="bi bi-pencil-square"></i>
+                  </button>
+                  <button *ngIf="fee.status !== 'paid' && canEdit()" type="button" class="btn btn-sm btn-active" (click)="openPaymentModal(fee)" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover" [title]="'FEES_PAGE.MARK_AS_PAID' | translate">
+                    <i class="bi bi-check"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-remove" (click)="deleteFee(fee)" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover" [title]="'FEES_PAGE.DELETE_FEE' | translate">
+                    <i class="bi bi-trash3"></i>
+                  </button>
                 </div>
+
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-    
+
     <!-- Load More Button -->
-    <div *ngIf="hasMoreFees()" class="text-center mt-3">
-      <button class="btn btn-outline-primary" (click)="loadMoreFees()">
-        Load More Fees
+    <div *ngIf="hasMoreFees()" class="text-center d-flex justify-content-center mt-3">
+      <button class="custom-btn-2 btn-add-border mb-4" (click)="loadMoreFees()">
+        <i class="bi bi-plus-circle me-2"></i>{{ 'FEES_PAGE.LOAD_MORE' | translate }}
       </button>
     </div>
   </div>
@@ -323,47 +303,47 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Add New Fee</h5>
+        <h5 class="modal-title">{{ 'FEES_PAGE.ADD_NEW_FEE' | translate }}</h5>
         <button type="button" class="btn-close" (click)="showAddFeeModal = false"></button>
       </div>
       <div class="modal-body">
         <form>
           <div class="mb-3">
-            <label class="form-label">Child *</label>
+            <label class="form-label">{{ 'FEES_PAGE.CHILD' | translate }} *</label>
             <select class="form-select" [(ngModel)]="newFee.childId" name="childId" required>
-              <option value="0">Select a child</option>
+              <option value="0">{{ 'FEES_PAGE.SELECT_CHILD' | translate }}</option>
               <option *ngFor="let child of children" [value]="child.id">{{ child.firstName }} {{ child.lastName }}</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Amount *</label>
+            <label class="form-label">{{ 'FEES_PAGE.AMOUNT' | translate }} *</label>
             <input type="number" class="form-control" [(ngModel)]="newFee.amount" name="amount" step="0.01" min="0" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Description *</label>
+            <label class="form-label">{{ 'FEES_PAGE.DESCRIPTION' | translate }} *</label>
             <input type="text" class="form-control" [(ngModel)]="newFee.description" name="description" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Due Date *</label>
+            <label class="form-label">{{ 'FEES_PAGE.DUE_DATE' | translate }} *</label>
             <input type="date" class="form-control" [(ngModel)]="newFee.dueDate" name="dueDate" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Fee Type</label>
+            <label class="form-label">{{ 'FEES_PAGE.FEE_TYPE' | translate }}</label>
             <select class="form-select" [(ngModel)]="newFee.feeType" name="feeType">
-              <option value="monthly">Monthly</option>
-              <option value="one-time">One-time</option>
-              <option value="late-fee">Late Fee</option>
+              <option value="monthly">{{ 'FEES_PAGE.MONTHLY' | translate }}</option>
+              <option value="one-time">{{ 'FEES_PAGE.ONE_TIME' | translate }}</option>
+              <option value="late-fee">{{ 'FEES_PAGE.LATE_FEE' | translate }}</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Notes</label>
+            <label class="form-label">{{ 'FEES_PAGE.NOTES' | translate }}</label>
             <textarea class="form-control" [(ngModel)]="newFee.notes" name="notes" rows="3"></textarea>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="showAddFeeModal = false">Cancel</button>
-        <button type="button" class="btn btn-primary" (click)="createFee()">Add Fee</button>
+        <button type="button" class="btn btn-secondary" (click)="showAddFeeModal = false">{{ 'FEES_PAGE.CANCEL' | translate }}</button>
+        <button type="button" class="btn btn-primary" (click)="createFee()">{{ 'FEES_PAGE.ADD_FEE' | translate }}</button>
       </div>
     </div>
   </div>
@@ -374,32 +354,32 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Create Monthly Fees for All Children</h5>
+        <h5 class="modal-title">{{ 'FEES_PAGE.CREATE_MONTHLY_FEES' | translate }}</h5>
         <button type="button" class="btn-close" (click)="showBulkFeeModal = false"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-info">
           <i class="bi bi-info-circle me-2"></i>
-          This will create a monthly fee for all {{ children.length }} children.
+          {{ 'FEES_PAGE.BULK_FEE_INFO' | translate }} {{ children.length }} {{ 'FEES_PAGE.CHILDREN' | translate }}.
         </div>
         <form>
           <div class="mb-3">
-            <label class="form-label">Amount per Child *</label>
+            <label class="form-label">{{ 'FEES_PAGE.AMOUNT_PER_CHILD' | translate }} *</label>
             <input type="number" class="form-control" [(ngModel)]="bulkFee.amount" name="amount" step="0.01" min="0" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Description *</label>
+            <label class="form-label">{{ 'FEES_PAGE.DESCRIPTION' | translate }} *</label>
             <input type="text" class="form-control" [(ngModel)]="bulkFee.description" name="description" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Due Date *</label>
+            <label class="form-label">{{ 'FEES_PAGE.DUE_DATE' | translate }} *</label>
             <input type="date" class="form-control" [(ngModel)]="bulkFee.dueDate" name="dueDate" required>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="showBulkFeeModal = false">Cancel</button>
-        <button type="button" class="btn btn-primary" (click)="createBulkFees()">Create Fees</button>
+        <button type="button" class="custom-btn-2 btn-cancel-2" (click)="showBulkFeeModal = false">{{ 'FEES_PAGE.CANCEL' | translate }}</button>
+        <button type="button" class="custom-btn-2 btn-add-global-2" (click)="createBulkFees()">{{ 'FEES_PAGE.CREATE_FEES' | translate }}</button>
       </div>
     </div>
   </div>
@@ -410,31 +390,31 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Mark Fee as Paid</h5>
+        <h5 class="modal-title">{{ 'FEES_PAGE.MARK_FEE_PAID' | translate }}</h5>
         <button type="button" class="btn-close" (click)="showPaymentModal = false"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <strong>Child:</strong> {{ selectedFee.childName }}<br>
-          <strong>Parent:</strong> {{ selectedFee.parentName }}<br>
-          <strong>Amount:</strong> ${{ selectedFee.amount | number:'1.2-2' }}<br>
-          <strong>Description:</strong> {{ selectedFee.description }}
+          <strong>{{ 'FEES_PAGE.CHILD' | translate }}:</strong> {{ selectedFee.childName }}<br>
+          <strong>{{ 'FEES_PAGE.PARENT' | translate }}:</strong> {{ selectedFee.parentName }}<br>
+          <strong>{{ 'FEES_PAGE.AMOUNT' | translate }}:</strong> {{ selectedFee.amount | appCurrency }}<br>
+          <strong>{{ 'FEES_PAGE.DESCRIPTION' | translate }}:</strong> {{ selectedFee.description }}
         </div>
         <hr>
         <form>
           <div class="mb-3">
-            <label class="form-label">Payment Date</label>
+            <label class="form-label">{{ 'FEES_PAGE.PAYMENT_DATE' | translate }}</label>
             <input type="date" class="form-control" [(ngModel)]="paymentData.paidDate" name="paidDate">
           </div>
           <div class="mb-3">
-            <label class="form-label">Payment Notes</label>
-            <textarea class="form-control" [(ngModel)]="paymentData.paymentNotes" name="paymentNotes" rows="3" placeholder="Optional payment notes..."></textarea>
+            <label class="form-label">{{ 'FEES_PAGE.PAYMENT_NOTES' | translate }}</label>
+            <textarea class="form-control" [(ngModel)]="paymentData.paymentNotes" name="paymentNotes" rows="3" [placeholder]="'FEES_PAGE.PAYMENT_NOTES_PLACEHOLDER' | translate"></textarea>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary btn-cancel-global" (click)="showPaymentModal = false">Cancel</button>
-        <button type="button" class="btn btn-success btn-add-global" (click)="payFee()">Mark as Paid</button>
+        <button type="button" class="btn btn-secondary btn-cancel-global" (click)="showPaymentModal = false">{{ 'FEES_PAGE.CANCEL' | translate }}</button>
+        <button type="button" class="btn btn-success btn-add-global" (click)="payFee()">{{ 'FEES_PAGE.CONFIRM_PAID' | translate }}</button>
       </div>
     </div>
   </div>

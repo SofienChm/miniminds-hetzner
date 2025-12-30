@@ -1,28 +1,30 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth';
 import { LeavesService, LeaveRequestModel, CreateLeaveRequestDto, LeaveBalanceDto } from './leaves.service';
 import { EducatorService } from '../educator/educator.service';
 import { EducatorModel } from '../educator/educator.interface';
 import { TitlePage, Breadcrumb, TitleAction } from '../../shared/layouts/title-page/title-page';
 import { Router } from '@angular/router';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-leaves',
   standalone: true,
-  imports: [CommonModule, FormsModule, TitlePage],
+  imports: [CommonModule, FormsModule, TitlePage, NgSelectModule, TranslateModule],
   templateUrl: './leaves.html',
   styleUrls: ['./leaves.scss']
 })
-export class Leaves implements OnInit {
+export class Leaves implements OnInit, OnDestroy {
   isAdmin = false;
   isTeacher = false;
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard', url: '/dashboard' },
-    { label: 'Leaves' }
-  ];
+  breadcrumbs: Breadcrumb[] = [];
   titleActions: TitleAction[] = [];
+  private langChangeSub?: Subscription;
 
   // Teacher view state
   balance: LeaveBalanceDto | null = null;
@@ -42,6 +44,7 @@ export class Leaves implements OnInit {
   displayedLeaves: LeaveRequestModel[] = [];
   allStatus: Array<'All' | 'Pending' | 'Approved' | 'Rejected'> = ['All', 'Pending', 'Approved', 'Rejected'];
   selectedStatus: 'All' | 'Pending' | 'Approved' | 'Rejected' = 'All';
+  statusOptions: Array<{ value: string; label: string; icon: string }> = [];
   loadingAdmin = false;
   leavesPerPage = 9;
   currentPage = 1;
@@ -56,10 +59,13 @@ export class Leaves implements OnInit {
     public authService: AuthService,
     private leavesService: LeavesService,
     private educatorService: EducatorService,
-    private router: Router
+    private router: Router,
+    private translateService: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit(): void {
+    this.pageTitleService.setTitle(this.translateService.instant('LEAVES_PAGE.TITLE'));
     this.isAdmin = this.authService.isAdmin();
     this.isTeacher = this.authService.isTeacher();
 
@@ -73,12 +79,37 @@ export class Leaves implements OnInit {
       this.loadTeachers();
     }
 
+    this.updateTranslatedContent();
+
+    this.langChangeSub = this.translateService.onLangChange.subscribe(() => {
+      this.updateTranslatedContent();
+      this.pageTitleService.setTitle(this.translateService.instant('LEAVES_PAGE.TITLE'));
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
+  }
+
+  updateTranslatedContent(): void {
+    this.breadcrumbs = [
+      { label: this.translateService.instant('LEAVES_PAGE.DASHBOARD'), url: '/dashboard' },
+      { label: this.translateService.instant('LEAVES_PAGE.LEAVES') }
+    ];
+
     this.titleActions = [
       {
-        label: 'Add Leave',
-        class: 'btn btn-primary',
+        label: this.translateService.instant('LEAVES_PAGE.ADD_LEAVE'),
+        class: 'btn-add-global-2',
         action: () => this.router.navigate(['/leaves/add'])
       }
+    ];
+
+    this.statusOptions = [
+      { value: 'All', label: this.translateService.instant('LEAVES_PAGE.ALL_STATUS'), icon: 'bi-list-ul' },
+      { value: 'Pending', label: this.translateService.instant('LEAVES_PAGE.PENDING'), icon: 'bi-hourglass-split' },
+      { value: 'Approved', label: this.translateService.instant('LEAVES_PAGE.APPROVED'), icon: 'bi-check-circle' },
+      { value: 'Rejected', label: this.translateService.instant('LEAVES_PAGE.REJECTED'), icon: 'bi-x-circle' }
     ];
   }
 
@@ -103,7 +134,7 @@ export class Leaves implements OnInit {
 
     const { startDate, endDate, reason } = this.newLeave;
     if (!startDate || !endDate) {
-      this.errorMessage = 'Start and end dates are required';
+      this.errorMessage = this.translateService.instant('LEAVES_PAGE.DATES_REQUIRED');
       this.submitting = false;
       return;
     }
@@ -116,7 +147,7 @@ export class Leaves implements OnInit {
         this.loadBalance();
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || 'Failed to submit leave request';
+        this.errorMessage = err.error?.message || this.translateService.instant('LEAVES_PAGE.FAILED_SUBMIT_REQUEST');
         this.submitting = false;
       }
     });
@@ -182,12 +213,12 @@ export class Leaves implements OnInit {
     const tid = this.adminSelectedTeacherId;
     const { startDate, endDate, reason } = this.adminNewLeave;
     if (!tid) {
-      this.adminError = 'Please select a teacher';
+      this.adminError = this.translateService.instant('LEAVES_PAGE.PLEASE_SELECT_TEACHER');
       this.adminSubmitting = false;
       return;
     }
     if (!startDate || !endDate) {
-      this.adminError = 'Start and end dates are required';
+      this.adminError = this.translateService.instant('LEAVES_PAGE.DATES_REQUIRED');
       this.adminSubmitting = false;
       return;
     }
@@ -201,9 +232,14 @@ export class Leaves implements OnInit {
         this.loadAdminLeaves();
       },
       error: (err) => {
-        this.adminError = err.error?.message || 'Failed to create leave';
+        this.adminError = err.error?.message || this.translateService.instant('LEAVES_PAGE.FAILED_CREATE_LEAVE');
         this.adminSubmitting = false;
       }
     });
+  }
+
+  // TrackBy function for ngFor performance optimization
+  trackById(index: number, item: LeaveRequestModel): number | undefined {
+    return item.id;
   }
 }

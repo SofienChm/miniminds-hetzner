@@ -1,6 +1,7 @@
 using DaycareAPI.Data;
 using DaycareAPI.DTOs;
 using DaycareAPI.Models;
+using DaycareAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -20,39 +21,93 @@ namespace DaycareAPI.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IEmailService _emailService;
 
-        public ParentsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public ParentsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IEmailService emailService)
         {
             _context = context;
             _userManager = userManager;
+            _emailService = emailService;
         }
 
         // GET: api/Parents
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Parent>>> GetParents([FromQuery] string? search = null)
+        public async Task<ActionResult<IEnumerable<ParentListDto>>> GetParents([FromQuery] string? search = null)
         {
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-            
+
             // Only Admin and Teacher can see all parents
             if (userRole != "Admin" && userRole != "Teacher")
             {
                 return Forbid();
             }
-            
+
             var query = _context.Parents.Include(p => p.Children).AsQueryable();
-            
+
             if (!string.IsNullOrEmpty(search))
             {
-                query = query.Where(p => 
+                query = query.Where(p =>
                     p.FirstName.Contains(search) ||
                     p.LastName.Contains(search) ||
                     p.Email.Contains(search) ||
                     p.PhoneNumber.Contains(search));
             }
-            
-            return await query
+
+            var parents = await query
                 .OrderByDescending(p => p.CreatedAt)
+                .Select(p => new ParentListDto
+                {
+                    Id = p.Id,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    Email = p.Email,
+                    PhoneNumber = p.PhoneNumber,
+                    Address = p.Address,
+                    EmergencyContact = p.EmergencyContact,
+                    Gender = p.Gender,
+                    DateOfBirth = p.DateOfBirth,
+                    Work = p.Work,
+                    ZipCode = p.ZipCode,
+                    ParentType = p.ParentType,
+                    IsActive = p.IsActive,
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt,
+                    HasProfilePicture = !string.IsNullOrEmpty(p.ProfilePicture),
+                    Children = p.Children.Select(c => new ChildListDto
+                    {
+                        Id = c.Id,
+                        FirstName = c.FirstName,
+                        LastName = c.LastName,
+                        DateOfBirth = c.DateOfBirth,
+                        Gender = c.Gender,
+                        Allergies = c.Allergies,
+                        MedicalNotes = c.MedicalNotes,
+                        ParentId = c.ParentId,
+                        EnrollmentDate = c.EnrollmentDate,
+                        IsActive = c.IsActive,
+                        CreatedAt = c.CreatedAt,
+                        UpdatedAt = c.UpdatedAt,
+                        HasProfilePicture = !string.IsNullOrEmpty(c.ProfilePicture)
+                    }).ToList()
+                })
                 .ToListAsync();
+
+            return parents;
+        }
+
+        // GET: api/Parents/5/profile-picture
+        [HttpGet("{id}/profile-picture")]
+        public async Task<ActionResult<object>> GetParentProfilePicture(int id)
+        {
+            var profilePicture = await _context.Parents
+                .Where(p => p.Id == id)
+                .Select(p => p.ProfilePicture)
+                .FirstOrDefaultAsync();
+
+            if (profilePicture == null)
+                return NotFound();
+
+            return Ok(new { profilePicture });
         }
 
         // GET: api/Parents/5
@@ -173,6 +228,17 @@ namespace DaycareAPI.Controllers
             await _context.SaveChangesAsync();
             Console.WriteLine($"Parent record created successfully: {parent.Id}");
 
+            // Send welcome email
+            try
+            {
+                await _emailService.SendWelcomeEmailAsync(parent.Email, $"{parent.FirstName} {parent.LastName}");
+                Console.WriteLine($"Welcome email sent to: {parent.Email}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send welcome email: {ex.Message}");
+            }
+
             return CreatedAtAction(nameof(GetParent), new { id = parent.Id }, parent);
         }
 
@@ -186,12 +252,31 @@ namespace DaycareAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            // Get the existing parent to find the email for syncing to ApplicationUser
+            var existingParent = await _context.Parents.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+            if (existingParent == null)
+                return NotFound();
+
             parent.UpdatedAt = DateTime.UtcNow;
             _context.Entry(parent).State = EntityState.Modified;
 
             try
             {
                 await _context.SaveChangesAsync();
+
+                // Sync changes to ApplicationUser
+                var user = await _userManager.FindByEmailAsync(existingParent.Email);
+                if (user != null)
+                {
+                    user.FirstName = parent.FirstName;
+                    user.LastName = parent.LastName;
+                    user.Email = parent.Email;
+                    user.UserName = parent.Email;
+                    if (!string.IsNullOrEmpty(parent.ProfilePicture))
+                        user.ProfilePicture = parent.ProfilePicture;
+                    user.UpdatedAt = DateTime.UtcNow;
+                    await _userManager.UpdateAsync(user);
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -220,6 +305,29 @@ namespace DaycareAPI.Controllers
         private bool ParentExists(int id)
         {
             return _context.Parents.Any(e => e.Id == id);
+        }
+
+        // POST: api/Parents/sync-profile-pictures
+        // One-time endpoint to sync profile pictures from ApplicationUser to Parent
+        [HttpPost("sync-profile-pictures")]
+        public async Task<IActionResult> SyncProfilePictures()
+        {
+            var parents = await _context.Parents.ToListAsync();
+            var syncedCount = 0;
+
+            foreach (var parent in parents)
+            {
+                var user = await _userManager.FindByEmailAsync(parent.Email);
+                if (user != null && !string.IsNullOrEmpty(user.ProfilePicture))
+                {
+                    parent.ProfilePicture = user.ProfilePicture;
+                    parent.UpdatedAt = DateTime.UtcNow;
+                    syncedCount++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Synced {syncedCount} parent profile pictures" });
         }
 
         // PUT: api/Parents/5/toggle-status

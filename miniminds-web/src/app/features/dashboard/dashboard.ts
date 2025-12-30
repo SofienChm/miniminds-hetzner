@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth';
 import { ChildrenService } from '../children/children.service';
 import { ParentService } from '../parent/parent.service';
@@ -8,8 +11,13 @@ import { EventService } from '../event/event.service';
 import { AttendanceService } from '../../core/services/attendance.service';
 import { DailyActivityService } from '../daily-activities/daily-activity.service';
 import { DailyActivity } from '../daily-activities/daily-activity.interface';
+import { GalleryService } from '../gallery/gallery.service';
+import { Photo } from '../gallery/gallery.interface';
+import { LeavesService, LeaveRequestModel } from '../leaves/leaves.service';
+import { FeeService } from '../fee/fee.service';
+import { FeeModel } from '../fee/fee.interface';
 import { BaseChartDirective } from 'ng2-charts';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CalendarComponent } from '../../shared/components/calendar/calendar.component';
 import type { ChartConfiguration } from 'chart.js';
 
@@ -20,11 +28,24 @@ import type { ChartConfiguration } from 'chart.js';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
-export class Dashboard implements OnInit {
+export class Dashboard implements OnInit, OnDestroy {
+  private langChangeSub?: Subscription;
   userRole: string | null = null;
   userName: string = '';
   userProfilePicture: string = '';
-  loading = true;
+  loading = false; // Changed to false - page loads immediately
+
+  // Individual loading states for progressive loading
+  loadingStates = {
+    children: true,
+    parents: true,
+    events: true,
+    attendance: true,
+    fees: true,
+    leaves: true,
+    activities: true,
+    photos: true
+  };
 
   stats = {
     children: 0,
@@ -45,25 +66,91 @@ export class Dashboard implements OnInit {
   recentChildren: any[] = [];
   upcomingEvents: any[] = [];
   myChildren: any[] = [];
+  upcomingLeaves: LeaveRequestModel[] = [];
+  unpaidChildren: FeeModel[] = [];
   selectedChildIndex: number = 0;
   todayActivities: DailyActivity[] = [];
+  recentPhotos: Photo[] = [];
   todayStats = {
     meals: { completed: 0, total: 0 },
     napTime: '',
     activities: 0
   };
 
+  // Leave Chart Data
+  leavesChartData: ChartConfiguration<'doughnut'>['data'] = {
+    labels: ['Present', 'Absent'],
+    datasets: [{
+      data: [0, 0],
+      backgroundColor: ['#202c4b', '#a7a7a7ff'],
+      hoverBackgroundColor: ['#1b253dff', '#a7a7a7ff']
+    }]
+  };
+
+  leavesChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    }
+  };  
+
+
   // Gender Chart Data
   genderChartData: ChartConfiguration<'doughnut'>['data'] = {
     labels: ['Boys', 'Girls'],
     datasets: [{
       data: [0, 0],
-      backgroundColor: ['#202c4b', '#dc3545'],
-      hoverBackgroundColor: ['#1b253dff', '#bb2d3b']
+          backgroundColor: ['#a8c5ff', '#feccfd'],
+          hoverBackgroundColor: ['#9bbaf6ff', '#f0bfefff']
     }]
   };
 
   genderChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    }
+  };
+
+  // Educators Attendance Chart Data
+  educatorsAttendanceChartData: ChartConfiguration<'doughnut'>['data'] = {
+    labels: ['Present', 'Absent'],
+    datasets: [{
+      data: [0, 0],
+      backgroundColor: ['#7dd3c0', '#e9ecef'],
+      hoverBackgroundColor: ['#218838', '#dee2e6']
+    }]
+  };
+
+  educatorsAttendanceChartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
     maintainAspectRatio: true,
     plugins: {
@@ -89,6 +176,11 @@ export class Dashboard implements OnInit {
   boysPercentage = 0;
   girlsPercentage = 0;
 
+  presentCount = 0;
+  absentCount = 0;
+  presentPercentage = 0;
+  absentPercentage = 0;
+
   paymentStats = {
     paid: 0,
     pending: 0,
@@ -99,8 +191,8 @@ export class Dashboard implements OnInit {
     labels: ['Paid', 'Pending', 'Overdue'],
     datasets: [{
       data: [0, 0, 0],
-      backgroundColor: ['#202c4b', '#cdeaf0', '#feccfd'],
-      hoverBackgroundColor: ['#202c4v', '#cdeaf9', '#feccf5']
+      backgroundColor: ['#7dd3c0', '#a8c5ff', '#feccfd'],
+      hoverBackgroundColor: ['#75cbb9ff', '#9bbaf6ff', '#f0bfefff']
     }]
   };
 
@@ -114,19 +206,49 @@ export class Dashboard implements OnInit {
     }
   };
 
-  attendanceChartData: ChartConfiguration<'bar'>['data'] = {
+  attendanceChartData: ChartConfiguration<'doughnut'>['data'] = {
+    labels: ['Present', 'Absent'],
+    datasets: [{
+      data: [0, 0],
+      backgroundColor: ['#7dd3c0', '#e9ecef'],
+      hoverBackgroundColor: ['#6ec9b6ff', '#dee2e6']
+    }]
+  };
+
+  attendanceBarChartData: ChartConfiguration<'bar'>['data'] = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [{
       label: 'Attendance',
       data: [10, 12, 11, 13, 12, 8, 7],
-      backgroundColor: '#202c4b',
-      borderColor: '#202c4b',
+      backgroundColor: '#7db9ff',
+      borderColor: '#7db9ff',
       borderWidth: 1,
-      borderRadius: 4
+      borderRadius: 12
     }]
   };
 
-  attendanceChartOptions: ChartConfiguration<'bar'>['options'] = {
+  attendanceChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    }
+  };
+
+  attendanceBarChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -159,7 +281,11 @@ export class Dashboard implements OnInit {
     private eventService: EventService,
     private attendanceService: AttendanceService,
     private dailyActivityService: DailyActivityService,
-    private router: Router
+    private leavesService: LeavesService,
+    private galleryService: GalleryService,
+    private feeService: FeeService,
+    private router: Router,
+    private translateService: TranslateService
   ) {}
 
   ngOnInit() {
@@ -169,7 +295,17 @@ export class Dashboard implements OnInit {
     this.userProfilePicture = user?.profilePicture || '';
     this.loadChartJS();
     this.initializeCharts();
+    this.updateChartLabels();
     this.loadDashboardData();
+
+    // Update chart labels when language changes
+    this.langChangeSub = this.translateService.onLangChange.subscribe(() => {
+      this.updateChartLabels();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
   }
 
   loadChartJS() {
@@ -183,8 +319,65 @@ export class Dashboard implements OnInit {
     this.attendanceChartData.datasets[0].data = [10, 12, 11, 13, 12, 8, 7];
   }
 
+  updateChartLabels() {
+    // Update leaves chart labels
+    this.leavesChartData.labels = [
+      this.translateService.instant('DASHBOARD.PRESENT'),
+      this.translateService.instant('DASHBOARD.ABSENT')
+    ];
+
+    // Update gender chart labels
+    this.genderChartData.labels = [
+      this.translateService.instant('DASHBOARD.BOYS'),
+      this.translateService.instant('DASHBOARD.GIRLS')
+    ];
+
+    // Update educators attendance chart labels
+    this.educatorsAttendanceChartData.labels = [
+      this.translateService.instant('DASHBOARD.PRESENT'),
+      this.translateService.instant('DASHBOARD.ABSENT')
+    ];
+
+    // Update payment chart labels
+    this.paymentChartData.labels = [
+      this.translateService.instant('DASHBOARD.PAID'),
+      this.translateService.instant('DASHBOARD.PENDING'),
+      this.translateService.instant('DASHBOARD.OVERDUE')
+    ];
+
+    // Update attendance chart labels
+    this.attendanceChartData.labels = [
+      this.translateService.instant('DASHBOARD.PRESENT'),
+      this.translateService.instant('DASHBOARD.ABSENT')
+    ];
+
+    // Update weekly attendance bar chart labels
+    this.attendanceBarChartData.labels = [
+      this.translateService.instant('DASHBOARD.MON'),
+      this.translateService.instant('DASHBOARD.TUE'),
+      this.translateService.instant('DASHBOARD.WED'),
+      this.translateService.instant('DASHBOARD.THU'),
+      this.translateService.instant('DASHBOARD.FRI'),
+      this.translateService.instant('DASHBOARD.SAT'),
+      this.translateService.instant('DASHBOARD.SUN')
+    ];
+
+    // Update attendance bar chart dataset label
+    this.attendanceBarChartData.datasets[0].label = this.translateService.instant('DASHBOARD.ATTENDANCE');
+  }
+
   loadDashboardData() {
-    this.loading = true;
+    // Reset all loading states
+    this.loadingStates = {
+      children: true,
+      parents: true,
+      events: true,
+      attendance: true,
+      fees: true,
+      leaves: true,
+      activities: true,
+      photos: true
+    };
 
     if (this.userRole === 'Parent') {
       this.loadParentDashboard();
@@ -195,56 +388,138 @@ export class Dashboard implements OnInit {
 
   loadParentDashboard() {
     const parentId = this.authService.getParentId();
+    let todayAttendances: any[] = [];
+
+    // Load parent profile data independently
     if (parentId) {
-      this.parentService.getParentWithChildren(parentId).subscribe({
+      this.parentService.getParentWithChildren(parentId).pipe(catchError(() => of(null))).subscribe({
         next: (parent) => {
-          if (parent.profilePicture) {
+          if (parent?.profilePicture) {
             this.authService.updateProfilePicture(parent.profilePicture);
             this.userProfilePicture = parent.profilePicture;
           }
+          this.loadingStates.parents = false;
+        },
+        error: () => {
+          this.loadingStates.parents = false;
         }
       });
+    } else {
+      this.loadingStates.parents = false;
     }
 
-    this.childrenService.loadChildren().subscribe({
+    // Load children data independently
+    this.childrenService.loadChildren().pipe(catchError(() => of([]))).subscribe({
       next: (children) => {
         this.myChildren = children;
         this.stats.children = children.length;
-        this.loadTodayAttendance();
+
+        // Apply attendance data if already loaded
+        if (todayAttendances.length > 0) {
+          this.applyAttendanceToChildren(todayAttendances);
+        }
+
+        // Load activities for first child
         if (children.length > 0 && children[0].id) {
           this.loadTodayActivities(children[0].id);
+        } else {
+          this.loadingStates.activities = false;
+          this.loadingStates.photos = false;
         }
+
+        this.loadingStates.children = false;
       },
-      error: (error) => {
-        console.error('Error loading children:', error);
+      error: () => {
         this.myChildren = [];
-        this.loading = false;
+        this.loadingStates.children = false;
+        this.loadingStates.activities = false;
+        this.loadingStates.photos = false;
       }
     });
 
-    this.eventService.loadEvents().subscribe({
+    // Load events data independently
+    this.eventService.loadEvents().pipe(catchError(() => of([]))).subscribe({
       next: (events) => {
         const now = new Date();
         this.upcomingEvents = events
           .filter(e => new Date(e.time) > now)
           .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
           .slice(0, 3);
+        this.loadingStates.events = false;
+      },
+      error: () => {
+        this.loadingStates.events = false;
+      }
+    });
+
+    // Load today's attendance independently
+    this.attendanceService.getTodayAttendance().pipe(catchError(() => of([]))).subscribe({
+      next: (attendances) => {
+        todayAttendances = attendances;
+        // Apply to children if already loaded
+        if (this.myChildren.length > 0) {
+          this.applyAttendanceToChildren(attendances);
+        }
+        this.loadingStates.attendance = false;
+      },
+      error: () => {
+        this.loadingStates.attendance = false;
+      }
+    });
+
+    // Mark unused loading states as complete for parent dashboard
+    this.loadingStates.fees = false;
+    this.loadingStates.leaves = false;
+  }
+
+  // Helper method to apply attendance data to children
+  private applyAttendanceToChildren(attendances: any[]) {
+    this.myChildren.forEach(child => {
+      const todayAttendance = attendances.find((att: any) => att.childId === child.id);
+      if (todayAttendance) {
+        if (todayAttendance.checkInTime) {
+          child.checkInTime = todayAttendance.checkInTime;
+        }
+        if (todayAttendance.checkOutTime) {
+          child.checkOutTime = todayAttendance.checkOutTime;
+        }
       }
     });
   }
 
   loadTodayActivities(childId: number) {
+    this.loadingStates.activities = true;
     const today = new Date().toISOString().split('T')[0];
     this.dailyActivityService.getActivitiesByChild(childId, today).subscribe({
       next: (activities) => {
-        this.todayActivities = activities.sort((a, b) => 
+        this.todayActivities = activities.sort((a, b) =>
           new Date(a.activityTime).getTime() - new Date(b.activityTime).getTime()
         );
         this.calculateTodayStats(activities);
+        this.loadingStates.activities = false;
       },
       error: (error) => {
         console.error('Error loading activities:', error);
         this.todayActivities = [];
+        this.loadingStates.activities = false;
+      }
+    });
+    this.loadRecentPhotos(childId);
+  }
+
+  loadRecentPhotos(childId: number) {
+    this.loadingStates.photos = true;
+    this.galleryService.getPhotosByChild(childId, 1, 3).subscribe({
+      next: (response) => {
+        this.recentPhotos = response.data.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ).slice(0, 3);
+        this.loadingStates.photos = false;
+      },
+      error: (error) => {
+        console.error('Error loading recent photos:', error);
+        this.recentPhotos = [];
+        this.loadingStates.photos = false;
       }
     });
   }
@@ -264,79 +539,116 @@ export class Dashboard implements OnInit {
     ).length;
   }
 
-  loadTodayAttendance() {
-    this.attendanceService.getTodayAttendance().subscribe({
-      next: (attendances) => {
-        this.myChildren.forEach(child => {
-          const todayAttendance = attendances.find((att: any) => att.childId === child.id);
-          if (todayAttendance) {
-            if (todayAttendance.checkInTime) {
-              child.checkInTime = todayAttendance.checkInTime;
-            }
-            if (todayAttendance.checkOutTime) {
-              child.checkOutTime = todayAttendance.checkOutTime;
-            }
-          }
-        });
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      }
-    });
-  }
-
   loadAdminTeacherDashboard() {
-    this.childrenService.loadChildren().subscribe({
+    // Store children and events for cross-calculations
+    let loadedChildren: any[] = [];
+    let loadedEvents: any[] = [];
+
+    // Load children data independently
+    this.childrenService.loadChildren().pipe(catchError(() => of([]))).subscribe({
       next: (children) => {
+        loadedChildren = children;
         this.stats.children = children.length;
         this.stats.activeChildren = children.filter(c => c.isActive).length;
         this.recentChildren = children.slice(0, 8);
         this.calculateGenderStats(children);
-        this.calculateMonthlyChanges(children);
+        this.calculateAttendanceStats();
+        // Calculate monthly changes if events are already loaded
+        if (loadedEvents.length > 0 || !this.loadingStates.events) {
+          this.calculateMonthlyChanges(children, loadedEvents);
+        }
+        this.loadingStates.children = false;
+      },
+      error: () => {
+        this.loadingStates.children = false;
       }
     });
 
-    this.parentService.loadParents().subscribe({
+    // Load parents data independently
+    this.parentService.loadParents().pipe(catchError(() => of([]))).subscribe({
       next: (parents) => {
         this.stats.parents = parents.length;
+        this.loadingStates.parents = false;
+      },
+      error: () => {
+        this.loadingStates.parents = false;
       }
     });
 
-    this.eventService.loadEvents().subscribe({
+    // Load events data independently
+    this.eventService.loadEvents().pipe(catchError(() => of([]))).subscribe({
       next: (events) => {
+        loadedEvents = events;
         this.stats.events = events.length;
         const now = new Date();
         this.upcomingEvents = events
           .filter(e => new Date(e.time) > now)
           .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
           .slice(0, 2);
-        this.loading = false;
+        // Calculate monthly changes if children are already loaded
+        if (loadedChildren.length > 0 || !this.loadingStates.children) {
+          this.calculateMonthlyChanges(loadedChildren, events);
+        }
+        this.loadingStates.events = false;
       },
-      error: () => this.loading = false
+      error: () => {
+        this.loadingStates.events = false;
+      }
     });
 
-
-
-    this.loadWeeklyAttendance();
-  }
-
-  loadWeeklyAttendance() {
-    this.attendanceService.getWeeklyAttendance().subscribe({
+    // Load weekly attendance data independently
+    this.attendanceService.getWeeklyAttendance().pipe(catchError(() => of([]))).subscribe({
       next: (attendanceData) => {
         if (attendanceData.length > 0) {
-          this.attendanceChartData.datasets[0].data = attendanceData.map((day: any) => day.presentCount || 0);
+          this.attendanceBarChartData.datasets[0].data = attendanceData.map((day: any) => day.presentCount || 0);
         } else {
           this.setDefaultAttendanceData();
         }
+        this.loadingStates.attendance = false;
       },
-      error: () => this.setDefaultAttendanceData()
+      error: () => {
+        this.setDefaultAttendanceData();
+        this.loadingStates.attendance = false;
+      }
+    });
+
+    // Load leaves data independently
+    this.leavesService.getAllLeaves('Approved').pipe(catchError(() => of([]))).subscribe({
+      next: (leaves) => {
+        const now = new Date();
+        this.upcomingLeaves = leaves
+          .filter(leave => new Date(leave.startDate) > now)
+          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+          .slice(0, 5);
+        this.loadingStates.leaves = false;
+      },
+      error: () => {
+        this.loadingStates.leaves = false;
+      }
+    });
+
+    // Load fees data independently
+    this.feeService.getFees().pipe(catchError(() => of([]))).subscribe({
+      next: (fees) => {
+        this.unpaidChildren = fees
+          .filter(fee => fee.status === 'pending' || fee.status === 'overdue')
+          .sort((a, b) => {
+            if (a.status === 'overdue' && b.status !== 'overdue') return -1;
+            if (a.status !== 'overdue' && b.status === 'overdue') return 1;
+            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          })
+          .slice(0, 5);
+        this.loadingStates.fees = false;
+      },
+      error: () => {
+        this.loadingStates.fees = false;
+      }
     });
   }
 
   setDefaultAttendanceData() {
     const totalChildren = this.stats.children || 20;
-    this.attendanceChartData.datasets[0].data = [
+    this.attendanceBarChartData.datasets[0].data = [
       Math.round(totalChildren * 0.90),
       Math.round(totalChildren * 1.00),
       Math.round(totalChildren * 0.98),
@@ -347,11 +659,24 @@ export class Dashboard implements OnInit {
     ];
   }
 
+  calculateAttendanceStats() {
+    const totalChildren = this.stats.children || 20;
+    this.presentCount = Math.round(totalChildren * 0.85);
+    this.absentCount = totalChildren - this.presentCount;
+    
+    if (totalChildren > 0) {
+      this.presentPercentage = Math.round((this.presentCount / totalChildren) * 100);
+      this.absentPercentage = Math.round((this.absentCount / totalChildren) * 100);
+      
+      this.attendanceChartData.datasets[0].data = [this.presentCount, this.absentCount];
+    }
+  }
+
   getGreeting(): string {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return this.translateService.instant('DASHBOARD.GOOD_MORNING');
+    if (hour < 18) return this.translateService.instant('DASHBOARD.GOOD_AFTERNOON');
+    return this.translateService.instant('DASHBOARD.GOOD_EVENING');
   }
 
   getAge(dateOfBirth: string): string {
@@ -359,33 +684,39 @@ export class Dashboard implements OnInit {
     const birthDate = new Date(dateOfBirth);
     let years = today.getFullYear() - birthDate.getFullYear();
     let months = today.getMonth() - birthDate.getMonth();
-    
+
     if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
       years--;
       months += 12;
     }
-    
+
     if (today.getDate() < birthDate.getDate()) {
       months--;
     }
-    
+
     if (years < 1) {
-      return `${months} month${months !== 1 ? 's' : ''}`;
+      const monthLabel = months !== 1
+        ? this.translateService.instant('DASHBOARD.MONTHS')
+        : this.translateService.instant('DASHBOARD.MONTH');
+      return `${months} ${monthLabel}`;
     }
-    
-    return `${years} year${years !== 1 ? 's' : ''}`;
+
+    const yearLabel = years !== 1
+      ? this.translateService.instant('DASHBOARD.YEARS')
+      : this.translateService.instant('DASHBOARD.YEAR');
+    return `${years} ${yearLabel}`;
   }
 
   getCheckInStatus(child: any): string {
     if (child.checkOutTime) {
       const time = new Date(child.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      return `checked out at ${time} 👋`;
+      return `${this.translateService.instant('DASHBOARD.CHECKED_OUT_AT')} ${time} 👋`;
     }
     if (child.checkInTime) {
       const time = new Date(child.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      return `checked in at ${time} 😊`;
+      return `${this.translateService.instant('DASHBOARD.CHECKED_IN_AT')} ${time} 😊`;
     }
-    return 'Not checked in yet';
+    return this.translateService.instant('DASHBOARD.NOT_CHECKED_IN_YET');
   }
 
   getSelectedChildName(): string {
@@ -397,20 +728,23 @@ export class Dashboard implements OnInit {
     this.boysCount = children.filter(c => c.gender?.toLowerCase() === 'male').length;
     this.girlsCount = children.filter(c => c.gender?.toLowerCase() === 'female').length;
     const total = this.boysCount + this.girlsCount;
-    
+
     if (total > 0) {
       this.boysPercentage = Math.round((this.boysCount / total) * 100);
       this.girlsPercentage = Math.round((this.girlsCount / total) * 100);
       this.genderChartData = {
-        labels: ['Boys', 'Girls'],
+        labels: [
+          this.translateService.instant('DASHBOARD.BOYS'),
+          this.translateService.instant('DASHBOARD.GIRLS')
+        ],
         datasets: [{
           data: [this.boysCount, this.girlsCount],
-          backgroundColor: ['#202c4b', '#feccfd'],
-          hoverBackgroundColor: ['#1b253dff', '#bb2d3b']
+          backgroundColor: ['#a8c5ff', '#feccfd'],
+          hoverBackgroundColor: ['#9bbaf6ff', '#f0bfefff']
         }]
       };
     }
-    
+
     this.calculatePaymentStats(children.length);
   }
 
@@ -463,29 +797,26 @@ export class Dashboard implements OnInit {
     }
   }
 
-  calculateMonthlyChanges(children: any[]) {
+  calculateMonthlyChanges(children: any[], events: any[] = []) {
     const now = new Date();
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
+
     const lastMonthChildren = children.filter(c => new Date(c.createdAt) < thisMonth).length;
     const thisMonthChildren = children.filter(c => new Date(c.createdAt) >= thisMonth).length;
-    
-    this.monthlyStats.childrenChange = lastMonthChildren > 0 
-      ? Math.round((thisMonthChildren / lastMonthChildren) * 100) 
+
+    this.monthlyStats.childrenChange = lastMonthChildren > 0
+      ? Math.round((thisMonthChildren / lastMonthChildren) * 100)
       : 0;
-    
-    this.eventService.loadEvents().subscribe({
-      next: (events) => {
-        const lastMonthEvents = events.filter(e => new Date(e.time) >= lastMonth && new Date(e.time) < thisMonth).length;
-        const thisMonthEvents = events.filter(e => new Date(e.time) >= thisMonth).length;
-        
-        this.monthlyStats.eventsChange = lastMonthEvents > 0 
-          ? Math.round(((thisMonthEvents - lastMonthEvents) / lastMonthEvents) * 100) 
-          : 0;
-      }
-    });
-    
+
+    // Use events passed from forkJoin instead of making another API call
+    const lastMonthEvents = events.filter(e => new Date(e.time) >= lastMonth && new Date(e.time) < thisMonth).length;
+    const thisMonthEvents = events.filter(e => new Date(e.time) >= thisMonth).length;
+
+    this.monthlyStats.eventsChange = lastMonthEvents > 0
+      ? Math.round(((thisMonthEvents - lastMonthEvents) / lastMonthEvents) * 100)
+      : 0;
+
     this.monthlyStats.income = children.length * 150;
     this.monthlyStats.incomeChange = Math.floor(Math.random() * 20) - 5;
   }
@@ -495,5 +826,27 @@ export class Dashboard implements OnInit {
     if (parentId) {
       this.router.navigate(['/parents/detail', parentId]);
     }
+  }
+
+  getLeaveTypeColor(leaveType: string): string {
+    switch (leaveType) {
+      case 'Annual':
+        return 'rgb(61 94 225 / 75%) !important';
+      case 'Medical':
+        return 'rgb(220 53 69 / 75%) !important';
+      case 'Emergency':
+        return 'rgb(44 126 143 / 75%) !important';
+      default:
+        return '#6c757d !important';
+    }
+  }
+
+  // TrackBy functions for ngFor performance optimization
+  trackById(index: number, item: any): number {
+    return item.id;
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
 }

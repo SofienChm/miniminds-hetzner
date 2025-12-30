@@ -1,22 +1,30 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { EventModel } from './event.interface';
 import { EventService } from './event.service';
 import { AuthService } from '../../core/services/auth';
 import { TitlePage, TitleAction, Breadcrumb, DropdownItem } from '../../shared/layouts/title-page/title-page';
 import { ParentChildHeaderSimpleComponent } from '../../shared/components/parent-child-header-simple/parent-child-header-simple.component';
 import { ExportUtil } from '../../shared/utils/export.util';
+import { AppCurrencyPipe } from '../../core/services/currency/currency.pipe';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-event',
   standalone: true,
-  imports: [CommonModule, FormsModule, TitlePage, ParentChildHeaderSimpleComponent],
+  imports: [CommonModule, FormsModule, TitlePage, ParentChildHeaderSimpleComponent, TranslateModule, NgSelectModule, AppCurrencyPipe],
   templateUrl: './event.html',
   styleUrl: './event.scss'
 })
-export class Event implements OnInit {
+export class Event implements OnInit, OnDestroy {
+  private langChangeSub?: Subscription;
+  private eventsSub?: Subscription;
   events: EventModel[] = [];
   filteredEvents: EventModel[] = [];
   displayedEvents: EventModel[] = [];
@@ -30,12 +38,11 @@ export class Event implements OnInit {
   currentPage = 1;
   searchTerm: string = '';
 
-  breadcrumbs: Breadcrumb[] = [
-    { label: 'Dashboard' },
-    { label: 'Events' }
-  ];
-
+  breadcrumbs: Breadcrumb[] = [];
   titleActions: TitleAction[] = [];
+
+  // Options for ng-select
+  sortOptions: { value: string; label: string; icon: string }[] = [];
 
   get isParent(): boolean {
     return this.authService.isParent();
@@ -44,33 +51,70 @@ export class Event implements OnInit {
   constructor(
     private eventService: EventService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit() {
+    this.pageTitleService.setTitle(this.translate.instant('EVENTS.TITLE'));
     this.userRole = this.authService.getUserRole();
-    this.setupTitleActions();
+    this.updateTranslatedContent();
     this.loadEvents();
-    this.eventService.events$.subscribe(events => {
+    this.eventsSub = this.eventService.events$.subscribe(events => {
       this.events = events;
     });
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.updateTranslatedContent();
+      this.pageTitleService.setTitle(this.translate.instant('EVENTS.TITLE'));
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
+    this.eventsSub?.unsubscribe();
+  }
+
+  private updateTranslatedContent(): void {
+    this.initBreadcrumbs();
+    this.initSortOptions();
+    this.setupTitleActions();
+  }
+
+  private initBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.DASHBOARD') },
+      { label: this.translate.instant('BREADCRUMBS.EVENTS') }
+    ];
+  }
+
+  private initSortOptions(): void {
+    this.sortOptions = [
+      { value: 'name-asc', label: this.translate.instant('EVENTS.SORT_AZ'), icon: 'bi-sort-alpha-down' },
+      { value: 'name-desc', label: this.translate.instant('EVENTS.SORT_ZA'), icon: 'bi-sort-alpha-up' },
+      { value: 'price-asc', label: this.translate.instant('EVENTS.SORT_PRICE_LOW'), icon: 'bi-sort-numeric-down' },
+      { value: 'price-desc', label: this.translate.instant('EVENTS.SORT_PRICE_HIGH'), icon: 'bi-sort-numeric-up' },
+      { value: 'created-desc', label: this.translate.instant('EVENTS.SORT_NEWEST'), icon: 'bi-clock-history' },
+      { value: 'created-asc', label: this.translate.instant('EVENTS.SORT_OLDEST'), icon: 'bi-clock' }
+    ];
   }
 
   setupTitleActions() {
     this.titleActions = [
       {
-        label: 'Export',
+        label: this.translate.instant('EVENTS.EXPORT'),
         class: 'btn btn-light me-2',
         action: () => {},
         dropdown: {
           items: [
             {
-              label: 'Export as PDF',
+              label: this.translate.instant('EVENTS.EXPORT_PDF'),
               icon: 'bi bi-file-earmark-pdf',
               action: () => this.exportToPDF()
             },
             {
-              label: 'Export as Excel',
+              label: this.translate.instant('EVENTS.EXPORT_EXCEL'),
               icon: 'bi bi-file-earmark-excel',
               action: () => this.exportToExcel()
             }
@@ -81,8 +125,8 @@ export class Event implements OnInit {
 
     if (this.authService.isAdmin() || this.authService.isTeacher()) {
       this.titleActions.push({
-        label: 'Add Event',
-        class: 'btn btn-primary',
+        label: this.translate.instant('EVENTS.ADD_EVENT'),
+        class: 'btn-add-global-2',
         action: () => this.router.navigate(['/events/add'])
       });
     }
@@ -99,6 +143,11 @@ export class Event implements OnInit {
       error: (error) => {
         console.error('Error loading events:', error);
         this.loading = false;
+        Swal.fire({
+          icon: 'error',
+          title: this.translate.instant('MESSAGES.ERROR'),
+          text: this.translate.instant('EVENTS.LOAD_ERROR')
+        });
       }
     });
   }
@@ -108,16 +157,37 @@ export class Event implements OnInit {
   }
 
   deleteEvent(id: number) {
-    if (confirm('Are you sure you want to delete this event?')) {
-      this.eventService.deleteEvent(id).subscribe({
-        next: () => {
-          this.loadEvents();
-        },
-        error: (error) => {
-          console.error('Error deleting event:', error);
-        }
-      });
-    }
+    Swal.fire({
+      title: this.translate.instant('EVENTS.DELETE_CONFIRM_TITLE'),
+      text: this.translate.instant('EVENTS.DELETE_CONFIRM_TEXT'),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: this.translate.instant('EVENTS.YES_DELETE'),
+      cancelButtonText: this.translate.instant('MESSAGES.CANCEL')
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.eventService.deleteEvent(id).subscribe({
+          next: () => {
+            Swal.fire({
+              icon: 'success',
+              title: this.translate.instant('MESSAGES.SUCCESS'),
+              text: this.translate.instant('EVENTS.DELETE_SUCCESS')
+            });
+            this.loadEvents();
+          },
+          error: (error) => {
+            console.error('Error deleting event:', error);
+            Swal.fire({
+              icon: 'error',
+              title: this.translate.instant('MESSAGES.ERROR'),
+              text: this.translate.instant('EVENTS.DELETE_ERROR')
+            });
+          }
+        });
+      }
+    });
   }
 
   canEdit(): boolean {
@@ -138,20 +208,24 @@ export class Event implements OnInit {
     this.applySort();
   }
 
+  onSortChange() {
+    this.applySort();
+  }
+
   toggleSortMenu() {
     this.showSortMenu = !this.showSortMenu;
   }
 
   applyFilter() {
     let filtered = [...this.events];
-    
+
     // Apply search filter
     if (this.searchTerm.trim()) {
-      filtered = filtered.filter(event => 
+      filtered = filtered.filter(event =>
         event.name.toLowerCase().includes(this.searchTerm.toLowerCase())
       );
     }
-    
+
     // Apply sorting
     if (this.isParent) {
       filtered.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
@@ -177,7 +251,7 @@ export class Event implements OnInit {
           break;
       }
     }
-    
+
     this.filteredEvents = filtered;
     this.currentPage = 1;
     this.updateDisplayedEvents();
@@ -202,15 +276,8 @@ export class Event implements OnInit {
   }
 
   getSortLabel(): string {
-    switch (this.sortBy) {
-      case 'name-asc': return 'Sort by A-Z';
-      case 'name-desc': return 'Sort by Z-A';
-      case 'price-asc': return 'Price: Low to High';
-      case 'price-desc': return 'Price: High to Low';
-      case 'created-desc': return 'Newest First';
-      case 'created-asc': return 'Oldest First';
-      default: return 'Newest First';
-    }
+    const option = this.sortOptions.find(o => o.value === this.sortBy);
+    return option ? option.label : this.translate.instant('EVENTS.SORT_NEWEST');
   }
 
   viewParticipants(event: EventModel) {
@@ -228,7 +295,9 @@ export class Event implements OnInit {
   }
 
   getEventStatus(event: EventModel): string {
-    return this.isEventActive(event) ? 'Active' : 'Expired';
+    return this.isEventActive(event)
+      ? this.translate.instant('EVENTS.STATUS_ACTIVE')
+      : this.translate.instant('EVENTS.STATUS_EXPIRED');
   }
 
   getEventStatusClass(event: EventModel): string {
@@ -251,7 +320,7 @@ export class Event implements OnInit {
       'Participants': event.participants?.length || 0
     }));
 
-    ExportUtil.exportToPDF(data, 'Events Report');
+    ExportUtil.exportToPDF(data, this.translate.instant('EVENTS.REPORT_TITLE'));
   }
 
   exportToExcel(): void {
@@ -266,6 +335,11 @@ export class Event implements OnInit {
       'Participants': event.participants?.length || 0
     }));
 
-    ExportUtil.exportToExcel(data, 'Events Report');
+    ExportUtil.exportToExcel(data, this.translate.instant('EVENTS.REPORT_TITLE'));
+  }
+
+  // TrackBy function for ngFor performance optimization
+  trackById(index: number, item: EventModel): number | undefined {
+    return item.id;
   }
 }

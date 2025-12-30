@@ -28,7 +28,7 @@ export interface BasicAIResponse {
   providedIn: 'root'
 })
 export class BasicAIService {
-  private apiUrl = `${environment.apiUrl}/api/BasicAI`;
+  private apiUrl = `${environment.apiUrl}/BasicAI`;
   private messagesSubject = new BehaviorSubject<BasicAIMessage[]>([]);
   public messages$ = this.messagesSubject.asObservable();
 

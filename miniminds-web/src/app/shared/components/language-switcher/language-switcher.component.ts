@@ -12,7 +12,7 @@ import { TranslateService } from '@ngx-translate/core';
         *ngFor="let lang of languages" 
         (click)="switchLanguage(lang.code)"
         [class.active]="currentLang === lang.code"
-        class="btn btn-sm btn-outline-secondary mx-1">
+        class="btn btn-sm btn-outline-secondary btn-cancel-global mx-1">
         {{ lang.flag }} {{ lang.name }}
       </button>
     </div>
@@ -32,7 +32,7 @@ export class LanguageSwitcherComponent {
   private translate = inject(TranslateService);
   
   languages = [
-    { code: 'en', name: 'EN', flag: '🇬🇧' },
+    { code: 'en', name: 'EN', flag: '🇪🇳' },
     { code: 'fr', name: 'FR', flag: '🇫🇷' },
     { code: 'it', name: 'IT', flag: '🇮🇹' }
   ];

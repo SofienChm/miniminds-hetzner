@@ -1,10 +1,12 @@
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Holiday } from '../../../features/holiday/holiday.interface';
+import { AppCurrencyPipe } from '../../../core/services/currency/currency.pipe';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-calendar',
-  imports: [CommonModule],
+  imports: [CommonModule, AppCurrencyPipe, TranslateModule],
   templateUrl: './calendar.component.html',
   styleUrls: ['./calendar.component.scss']
 })
@@ -16,6 +18,8 @@ export class CalendarComponent implements OnChanges {
 
   currentMonth: Date = new Date();
   weeks: Date[][] = [];
+
+  constructor(private translateService: TranslateService) {}
 
   ngOnInit() {
     this.generateCalendar();
@@ -87,9 +91,10 @@ export class CalendarComponent implements OnChanges {
   }
 
   getMonthYear(): string {
-    return this.currentMonth.toLocaleDateString('en-US', { 
-      month: 'long', 
-      year: 'numeric' 
+    const locale = this.translateService.currentLang || 'en';
+    return this.currentMonth.toLocaleDateString(locale, {
+      month: 'long',
+      year: 'numeric'
     });
   }
 

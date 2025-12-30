@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CalendarComponent } from '../../shared/components/calendar/calendar.component';
 import { TitlePage } from '../../shared/layouts/title-page/title-page';
 import { EventService } from '../event/event.service';
 import { EventModel } from '../event/event.interface';
@@ -12,13 +11,14 @@ import { CalendarOptions } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { ParentChildHeaderSimpleComponent } from '../../shared/components/parent-child-header-simple/parent-child-header-simple.component';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { PageTitleService } from '../../core/services/page-title.service';
 
 @Component({
   selector: 'app-calendar-page',
-  imports: [CommonModule, CalendarComponent, TitlePage, FullCalendarModule, ParentChildHeaderSimpleComponent],
+  imports: [CommonModule, TitlePage, FullCalendarModule, ParentChildHeaderSimpleComponent, TranslateModule],
   templateUrl: './calendar.component.html',
   styleUrls: ['./calendar.component.scss']
 })
@@ -26,18 +26,12 @@ export class CalendarPageComponent implements OnInit {
   selectedDate: Date = new Date();
   events: EventModel[] = [];
   holidays: Holiday[] = [];
-  fullCalendarMonth: Date = new Date();
-  fullCalendarWeeks: Date[][] = [];
   selectedEvent: EventModel | null = null;
   selectedDateEvents: EventModel[] = [];
   selectedDateHolidays: Holiday[] = [];
   showDateEventsModal = false;
   showNoEventsModal = false;
   loading = false;
-  displayedChildren: any[] = [];
-  filteredChildren: any[] = [];
-  viewMode = 'grid';
-  userRole = '';
   calendarOptions: CalendarOptions = {
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     initialView: 'dayGridMonth',
@@ -51,12 +45,20 @@ export class CalendarPageComponent implements OnInit {
     dayCellClassNames: (arg) => {
       const cellDate = new Date(arg.date);
       cellDate.setHours(0, 0, 0, 0);
+      const classes = [];
       const hasHoliday = this.holidays.some(h => {
         const holidayDate = new Date(h.date);
         holidayDate.setHours(0, 0, 0, 0);
         return cellDate.getTime() === holidayDate.getTime();
       });
-      return hasHoliday ? ['holiday'] : [];
+      const hasEvent = this.events.some(e => {
+        const eventDate = new Date(e.time);
+        eventDate.setHours(0, 0, 0, 0);
+        return cellDate.getTime() === eventDate.getTime();
+      });
+      if (hasHoliday) classes.push('holiday');
+      if (hasEvent) classes.push('event-day');
+      return classes;
     },
     dateClick: (info) => {
       const clickedDate = new Date(info.dateStr);
@@ -74,10 +76,7 @@ export class CalendarPageComponent implements OnInit {
     }
   };
   get isParent(): boolean {
-      return this.authService.isParent();
-  }
-  back() {
-    this.location.back();
+    return this.authService.isParent();
   }
   closeEventModal() {
     this.selectedEvent = null;
@@ -96,27 +95,32 @@ export class CalendarPageComponent implements OnInit {
     private authService: AuthService,
     private eventService: EventService,
     private holidayService: HolidayService,
-    private location: Location,
-    private router: Router
+    private router: Router,
+    private translateService: TranslateService,
+    private pageTitleService: PageTitleService
   ) {}
 
   ngOnInit() {
+    this.pageTitleService.setTitle(this.translateService.instant('CALENDAR_PAGE.TITLE'));
     this.loadEvents();
     this.loadHolidays();
-    this.generateFullCalendar();
   }
 
   loadEvents() {
     this.eventService.loadEvents().subscribe(events => {
       this.events = events;
-      this.updateCalendarEvents();
+      if (this.holidays.length > 0) {
+        this.updateCalendarEvents();
+      }
     });
   }
 
   loadHolidays() {
     this.holidayService.getHolidays().subscribe(holidays => {
       this.holidays = holidays;
-      this.updateCalendarEvents();
+      if (this.events.length > 0) {
+        this.updateCalendarEvents();
+      }
     });
   }
 
@@ -177,93 +181,11 @@ export class CalendarPageComponent implements OnInit {
     return item.dateTime;
   }
 
-  generateFullCalendar() {
-    const year = this.fullCalendarMonth.getFullYear();
-    const month = this.fullCalendarMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-    this.fullCalendarWeeks = [];
-    let currentWeek: Date[] = [];
-
-    for (let i = 0; i < 42; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      currentWeek.push(date);
-      
-      if (currentWeek.length === 7) {
-        this.fullCalendarWeeks.push(currentWeek);
-        currentWeek = [];
-      }
-    }
-  }
-
-  previousMonthFull() {
-    this.fullCalendarMonth.setMonth(this.fullCalendarMonth.getMonth() - 1);
-    this.generateFullCalendar();
-  }
-
-  nextMonthFull() {
-    this.fullCalendarMonth.setMonth(this.fullCalendarMonth.getMonth() + 1);
-    this.generateFullCalendar();
-  }
-
-  getFullCalendarMonthYear(): string {
-    return this.fullCalendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  }
-
-  formatDateAttr(date: Date): string {
-    return date.toISOString().split('T')[0];
-  }
-
-  isToday(date: Date): boolean {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  }
-
-  isPast(date: Date): boolean {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
-  }
-
-  isFuture(date: Date): boolean {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date > today;
-  }
-
-  isCurrentMonth(date: Date): boolean {
-    return date.getMonth() === this.fullCalendarMonth.getMonth();
-  }
-
   getHolidaysForDay(date: Date): Holiday[] {
     return this.holidays.filter(holiday => {
       const holidayDate = new Date(holiday.date);
       return holidayDate.toDateString() === date.toDateString();
     });
-  }
-
-  getEventsForDay(date: Date): EventModel[] {
-    return this.events.filter(event => {
-      const eventDate = new Date(event.time);
-      return eventDate.toDateString() === date.toDateString();
-    });
-  }
-
-  showHolidayDetails(holiday: Holiday, event: Event) {
-    event.stopPropagation();
-    alert(`Holiday: ${holiday.name}\nDate: ${new Date(holiday.date).toLocaleDateString()}`);
-  }
-
-  showEventDetails(event: EventModel, clickEvent: Event) {
-    clickEvent.stopPropagation();
-    this.selectedEvent = event;
-  }
-
-  selectDate(date: Date) {
-    this.selectedDate = date;
   }
 
   goToEventDetail(event: EventModel) {

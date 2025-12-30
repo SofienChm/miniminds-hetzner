@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ApiConfig } from '../config/api.config';
+import { ApiConfig } from '../../core/config/api.config';
 
 @Injectable({
   providedIn: 'root'

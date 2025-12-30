@@ -19,6 +19,7 @@ export class Login {
   };
   errorMessage = '';
   isLoading = false;
+  showPassword = false;
 
   constructor(
     private authService: AuthService,
@@ -27,6 +28,10 @@ export class Login {
 
   isMobile(): boolean {
     return window.innerWidth < 768;
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter, HostListener } from '@angular/core';
 import { AuthResponse } from '../../../core/interfaces/dto/auth-response-dto';
 import { AuthService } from '../../../core/services/auth';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -7,15 +7,18 @@ import { PushNotificationService } from '../../../core/services/push-notificatio
 import { Notification } from '../../../core/interfaces/notification.interface';
 import { CommonModule } from '@angular/common';
 import { LanguageSelector } from '../../components/language-selector/language-selector';
+import { TranslateModule } from '@ngx-translate/core';
 import { MessagesService } from '../../../core/services/messages.service';
+import { PageTitleService } from '../../../core/services/page-title.service';
 import { HttpClient } from '@angular/common/http';
 import { ApiConfig } from '../../../core/config/api.config';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, RouterLink, RouterLinkActive, LanguageSelector],
+  imports: [CommonModule, RouterLink, RouterLinkActive, LanguageSelector, TranslateModule],
   templateUrl: './header.html',
-  styleUrl: './header.scss'
+  styleUrls: ['./header.scss']
 })
 
 export class Header implements OnInit, OnDestroy {
@@ -25,16 +28,21 @@ export class Header implements OnInit, OnDestroy {
   messagesUnreadCount = 0;
   showNotifications = false;
   showUserMenu = false;
+  showQuickLinks = false;
   notifications: Notification[] = [];
   isAdmin = false;
   isParent = false;
+  pageTitle = '';
+  private messageCountIntervalId?: any;
   private apiUrl = ApiConfig.ENDPOINTS.PARENTS;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private authService: AuthService,
     private notificationService: NotificationService,
     private pushNotificationService: PushNotificationService,
     private messagesService: MessagesService,
+    private pageTitleService: PageTitleService,
     private router: Router,
     private http: HttpClient
   ) {}
@@ -63,8 +71,8 @@ export class Header implements OnInit, OnDestroy {
           if (userId) {
             localStorage.setItem('userId', userId);
           }
-        } catch (e) {
-          console.error('❌ Failed to extract userId from token', e);
+        } catch {
+          // Token parsing failed - userId will remain null
         }
       }
       
@@ -77,35 +85,48 @@ export class Header implements OnInit, OnDestroy {
       }
     }
 
-    this.notificationService.unreadCount$.subscribe(count => {
-      this.unreadCount = count;
+    this.notificationService.unreadCount$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(count => {
+        this.unreadCount = count;
+      });
+
+    this.notificationService.notificationReceived$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(notification => {
+        if (notification) {
+          this.notifications.unshift(notification);
+        }
+      });
+
+    this.pageTitleService.title$.subscribe(title => {
+      this.pageTitle = title;
     });
 
-    this.notificationService.notificationReceived$.subscribe(notification => {
-      if (notification) {
-        this.notifications.unshift(notification);
-      }
-    });
+    this.notificationService.messageUnreadCount$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(count => {
+        this.messagesUnreadCount = count;
+      });
 
-    this.notificationService.messageUnreadCount$.subscribe(count => {
-      this.messagesUnreadCount = count;
-    });
-
-    document.addEventListener('click', this.handleClickOutside);
-  }
+    }
 
   ngOnDestroy(): void {
-    document.removeEventListener('click', this.handleClickOutside);
+    this.destroy$.next();
+    this.destroy$.complete();
     this.notificationService.stopConnection();
   }
 
   loadNotifications(): void {
     if (this.currentUser) {
-      this.notificationService.getAllNotifications().subscribe(
-        notifications => {
+      this.notificationService.getAllNotifications().subscribe({
+        next: (notifications) => {
           this.notifications = notifications;
+        },
+        error: () => {
+          this.notifications = [];
         }
-      );
+      });
     }
   }
 
@@ -176,7 +197,11 @@ export class Header implements OnInit, OnDestroy {
       'warning': 'bi bi-exclamation-triangle-fill',
       'error': 'bi bi-x-circle-fill',
       'message': 'bi bi-chat-dots-fill',
-      'system': 'bi bi-gear-fill'
+      'event': 'bi bi-calendar-event-fill',
+      'system': 'bi bi-gear-fill',
+      'eventregistration': 'bi bi-patch-question',
+      'payment': 'bi bi-currency-dollar',
+      'fee': 'bi bi-currency-dollar'
     };
     return icons[type.toLowerCase()] || 'bi bi-bell-fill';
   }
@@ -187,7 +212,9 @@ export class Header implements OnInit, OnDestroy {
       'success': 'icon-success',
       'warning': 'icon-warning',
       'error': 'icon-error',
+      'payment': 'icon-error',
       'message': 'icon-message',
+      'event': 'icon-event',
       'system': 'icon-system'
     };
     return classes[type.toLowerCase()] || 'icon-default';
@@ -214,27 +241,27 @@ export class Header implements OnInit, OnDestroy {
     return date.toLocaleDateString();
   }
 
-  private handleClickOutside = (event: MouseEvent): void => {
+  toggleQuickLinks(): void {
+    this.showQuickLinks = !this.showQuickLinks;
+  }
+
+  closeQuickLinks(): void {
+    this.showQuickLinks = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  handleClickOutside(event: MouseEvent): void {
     const target = event.target as HTMLElement;
-    
+
     // Close notifications if clicked outside
     if (this.showNotifications && !target.closest('.notification-dropdown') && !target.closest('.btn-header') && !target.closest('.nav-link')) {
       this.showNotifications = false;
     }
-    
+
     // Close user menu if clicked outside
     if (this.showUserMenu && !target.closest('.dropdown')) {
       this.showUserMenu = false;
     }
-  }
-  showProfileModal = false;
-
-  openProfileModal() {
-    this.showProfileModal = true;
-  }
-
-  closeProfileModal() {
-    this.showProfileModal = false;
   }
 
   loadParentProfilePicture() {

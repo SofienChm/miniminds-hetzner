@@ -169,16 +169,50 @@ namespace DaycareAPI.Controllers
             if (user == null)
                 return NotFound();
 
+            var oldEmail = user.Email;
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
             user.Email = model.Email;
             user.UserName = model.Email;
             if (!string.IsNullOrEmpty(model.ProfilePicture))
                 user.ProfilePicture = model.ProfilePicture;
-            
+
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
+
+            // Sync profile changes to Parent table if user is a parent
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains("Parent"))
+            {
+                var parent = await _context.Parents.FirstOrDefaultAsync(p => p.Email == oldEmail);
+                if (parent != null)
+                {
+                    parent.FirstName = model.FirstName;
+                    parent.LastName = model.LastName;
+                    parent.Email = model.Email;
+                    if (!string.IsNullOrEmpty(model.ProfilePicture))
+                        parent.ProfilePicture = model.ProfilePicture;
+                    parent.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // Sync profile changes to Teacher table if user is a teacher
+            if (roles.Contains("Teacher"))
+            {
+                var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Email == oldEmail);
+                if (teacher != null)
+                {
+                    teacher.FirstName = model.FirstName;
+                    teacher.LastName = model.LastName;
+                    teacher.Email = model.Email;
+                    if (!string.IsNullOrEmpty(model.ProfilePicture))
+                        teacher.ProfilePicture = model.ProfilePicture;
+                    teacher.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             return Ok(new { message = "Profile updated successfully" });
         }
@@ -187,13 +221,21 @@ namespace DaycareAPI.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateLanguage([FromBody] UpdateLanguageDto model)
         {
+            // Try to get user ID from the correct claim
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
 
-            var user = await _userManager.FindByIdAsync(userId);
+            // If that returns the email (from 'sub' claim), try to find by email instead
+            var user = await _userManager.FindByIdAsync(userId ?? "");
+
+            // If not found by ID, it might be because 'sub' claim is mapped to NameIdentifier
+            // In that case, userId contains the email, so find by email
+            if (user == null && !string.IsNullOrEmpty(userId) && userId.Contains("@"))
+            {
+                user = await _userManager.FindByEmailAsync(userId);
+            }
+
             if (user == null)
-                return NotFound();
+                return NotFound(new { message = "User not found", claimValue = userId });
 
             user.PreferredLanguage = model.Language;
             var result = await _userManager.UpdateAsync(user);
@@ -202,11 +244,6 @@ namespace DaycareAPI.Controllers
                 return BadRequest(result.Errors);
 
             return Ok(new { message = "Language updated successfully" });
-        }
-
-        public class UpdateLanguageDto
-        {
-            public string Language { get; set; } = string.Empty;
         }
     }
 }

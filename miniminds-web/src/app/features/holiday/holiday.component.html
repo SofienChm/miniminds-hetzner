@@ -1,77 +1,53 @@
-  
+
 <div class="container-fluid mt-4">
-  <app-title-page 
-    [title]="'Holiday Management'"
+  <app-title-page
+    [title]="'HOLIDAYS_PAGE.TITLE' | translate"
     [breadcrumbs]="[
-      { label: 'Dashboard', url: '/dashboard' },
-      { label: 'Holidays' }
+      { label: 'HOLIDAYS_PAGE.HOLIDAYS' | translate }
     ]"
-    [actions]="[
-      {
-        label: 'Add Holiday',
-        icon: 'bi bi-plus-square',
-        class: 'btn-primary',
-        action: addHoliday
-      }
-    ]">
+    [actions]="titleActions">
   </app-title-page>
 
   <div class="row">
     <div class="col-12">
-      <div class="card global-card holiday-style">
+      <div class="card card-general holiday-style">
         <div class="card-header">
-          <h5 class="mb-0">Holidays</h5>
+          <h5 class="mb-0"><i class="bi bi-calendar-event"></i>{{ 'HOLIDAYS_PAGE.HOLIDAYS' | translate }}</h5>
         </div>
         <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-holiday">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Date</th>
-                  <th>Color</th>
-                  <th>Recurring</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+          <div class="table-responsive custom-table">
+            <table class="table table-hover">
               <tbody>
+                  <tr>
+                  <th>{{ 'HOLIDAYS_PAGE.NAME' | translate }}</th>
+                  <th>{{ 'HOLIDAYS_PAGE.DATE' | translate }}</th>
+                  <th>{{ 'HOLIDAYS_PAGE.COLOR' | translate }}</th>
+                  <th>{{ 'HOLIDAYS_PAGE.RECURRING' | translate }}</th>
+                  <th>{{ 'HOLIDAYS_PAGE.ACTIONS' | translate }}</th>
+                </tr>
                 <tr *ngFor="let holiday of displayedHolidays">
-                  <td class="title-table">{{ holiday.name }}</td>
+                  <td class="title-table name-last">{{ holiday.name }}</td>
                   <td>{{ holiday.date | date:'mediumDate' }}</td>
                   <td>
                     <span class="color-indicator" [style.background-color]="holiday.color"></span>
-                    
+
                   </td>
                   <td>
                     <span class="badge" [class]="holiday.isRecurring ? 'badge-success' : 'badge-secondary'">
-                      {{ holiday.isRecurring ? 'Yes' : 'No' }}
+                      {{ holiday.isRecurring ? ('HOLIDAYS_PAGE.YES' | translate) : ('HOLIDAYS_PAGE.NO' | translate) }}
                     </span>
                   </td>
                   <td>
-                    <div class="dropdown">
-                      <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <div class="d-flex gap-1" >
+                      <button class="btn btn-sm btn-view" (click)="showDetail(holiday)">
+                        <i class="bi bi-eye"></i>
                       </button>
-                      <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                          <button class="dropdown-item" (click)="showDetail(holiday)">
-                            <i class="bi bi-eye me-2"></i>
-                            View
-                          </button>
-                        </li>
-                        <li>
-                          <button class="dropdown-item" (click)="editHoliday(holiday)">
-                            <i class="bi bi-pencil-square me-2"></i>
-                            Edit
-                          </button>
-                        </li>
-                        <li>
-                          <button class="dropdown-item text-danger" (click)="deleteHoliday(holiday.id!)">
-                            <i class="bi bi-trash3 me-2"></i>
-                            Delete
-                          </button>
-                        </li>
-                      </ul>
+                      <button class="btn btn-sm btn-edit" (click)="editHoliday(holiday)">
+                        <i class="bi bi-pencil-square"></i>
+                      </button>
+                      <button class="btn btn-sm btn-remove" (click)="deleteHoliday(holiday.id!)">
+                        <i class="bi bi-trash3"></i>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -80,11 +56,11 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Load More Button -->
-      <div *ngIf="hasMoreHolidays()" class="text-center mt-3">
-        <button class="btn btn-outline-primary" (click)="loadMoreHolidays()">
-          Load More Holidays
+      <div *ngIf="hasMoreHolidays()" class="text-center d-flex justify-content-center mt-3">
+        <button class="custom-btn-2 btn-add-border mb-4" (click)="loadMoreHolidays()">
+          <i class="bi bi-plus-circle me-2"></i>{{ 'HOLIDAYS_PAGE.LOAD_MORE' | translate }}
         </button>
       </div>
     </div>
@@ -102,11 +78,11 @@
       <div class="modal-body" *ngIf="selectedHoliday">
         <div class="row">
           <div class="col-md-6">
-            <strong>Date:</strong>
+            <strong>{{ 'HOLIDAYS_PAGE.DATE' | translate }}:</strong>
             <p>{{ selectedHoliday.date | date:'fullDate' }}</p>
           </div>
           <div class="col-md-6">
-            <strong>Color:</strong>
+            <strong>{{ 'HOLIDAYS_PAGE.COLOR' | translate }}:</strong>
             <p>
               <span class="color-indicator" [style.background-color]="selectedHoliday.color"></span>
               {{ selectedHoliday.color }}
@@ -115,23 +91,23 @@
         </div>
         <div class="row">
           <div class="col-md-6">
-            <strong>Recurring:</strong>
-            <p>{{ selectedHoliday.isRecurring ? 'Yes' : 'No' }}</p>
+            <strong>{{ 'HOLIDAYS_PAGE.RECURRING' | translate }}:</strong>
+            <p>{{ selectedHoliday.isRecurring ? ('HOLIDAYS_PAGE.YES' | translate) : ('HOLIDAYS_PAGE.NO' | translate) }}</p>
           </div>
           <div class="col-md-6" *ngIf="selectedHoliday.isRecurring">
-            <strong>Recurrence Type:</strong>
+            <strong>{{ 'HOLIDAYS_PAGE.RECURRENCE_TYPE' | translate }}:</strong>
             <p>{{ selectedHoliday.recurrenceType }}</p>
           </div>
         </div>
         <div class="row" *ngIf="selectedHoliday.description">
           <div class="col-12">
-            <strong>Description:</strong>
+            <strong>{{ 'HOLIDAYS_PAGE.DESCRIPTION' | translate }}:</strong>
             <p>{{ selectedHoliday.description }}</p>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeModal()">Close</button>
+        <button type="button" class="custom-btn-2 btn-cancel-2" (click)="closeModal()">{{ 'HOLIDAYS_PAGE.CLOSE' | translate }}</button>
       </div>
     </div>
   </div>
@@ -143,7 +119,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Edit Holiday</h5>
+        <h5 class="modal-title">{{ 'HOLIDAYS_PAGE.EDIT_HOLIDAY' | translate }}</h5>
         <button type="button" class="btn-close" (click)="closeEditModal()"></button>
       </div>
       <form [formGroup]="holidayForm" (ngSubmit)="onSubmit()">
@@ -151,7 +127,7 @@
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="name" class="form-label">Holiday Name *</label>
+                <label for="name" class="form-label">{{ 'HOLIDAYS_PAGE.HOLIDAY_NAME' | translate }} *</label>
                 <input
                   type="text"
                   class="form-control"
@@ -160,13 +136,13 @@
                   [class.is-invalid]="holidayForm.get('name')?.invalid && holidayForm.get('name')?.touched"
                 >
                 <div class="invalid-feedback" *ngIf="holidayForm.get('name')?.invalid && holidayForm.get('name')?.touched">
-                  Holiday name is required
+                  {{ 'HOLIDAYS_PAGE.HOLIDAY_NAME_REQUIRED' | translate }}
                 </div>
               </div>
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="date" class="form-label">Date *</label>
+                <label for="date" class="form-label">{{ 'HOLIDAYS_PAGE.DATE' | translate }} *</label>
                 <input
                   type="date"
                   class="form-control"
@@ -175,7 +151,7 @@
                   [class.is-invalid]="holidayForm.get('date')?.invalid && holidayForm.get('date')?.touched"
                 >
                 <div class="invalid-feedback" *ngIf="holidayForm.get('date')?.invalid && holidayForm.get('date')?.touched">
-                  Date is required
+                  {{ 'HOLIDAYS_PAGE.DATE_REQUIRED' | translate }}
                 </div>
               </div>
             </div>
@@ -184,7 +160,7 @@
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="color" class="form-label">Color *</label>
+                <label for="color" class="form-label">{{ 'HOLIDAYS_PAGE.COLOR' | translate }} *</label>
                 <input
                   type="color"
                   class="form-control form-control-color"
@@ -203,7 +179,7 @@
                     formControlName="isRecurring"
                   >
                   <label class="form-check-label" for="isRecurring">
-                    Recurring Holiday
+                    {{ 'HOLIDAYS_PAGE.RECURRING_HOLIDAY' | translate }}
                   </label>
                 </div>
               </div>
@@ -213,30 +189,30 @@
           <div class="row" *ngIf="holidayForm.get('isRecurring')?.value">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="recurrenceType" class="form-label">Recurrence Type</label>
+                <label for="recurrenceType" class="form-label">{{ 'HOLIDAYS_PAGE.RECURRENCE_TYPE' | translate }}</label>
                 <select class="form-select" id="recurrenceType" formControlName="recurrenceType">
-                  <option value="">Select type</option>
-                  <option value="yearly">Yearly</option>
-                  <option value="monthly">Monthly</option>
+                  <option value="">{{ 'HOLIDAYS_PAGE.SELECT_TYPE' | translate }}</option>
+                  <option value="yearly">{{ 'HOLIDAYS_PAGE.YEARLY' | translate }}</option>
+                  <option value="monthly">{{ 'HOLIDAYS_PAGE.MONTHLY' | translate }}</option>
                 </select>
               </div>
             </div>
           </div>
 
           <div class="mb-3">
-            <label for="description" class="form-label">Description</label>
+            <label for="description" class="form-label">{{ 'HOLIDAYS_PAGE.DESCRIPTION' | translate }}</label>
             <textarea
               class="form-control"
               id="description"
               rows="3"
               formControlName="description"
-              placeholder="Optional description..."
+              [placeholder]="'HOLIDAYS_PAGE.DESCRIPTION_PLACEHOLDER' | translate"
             ></textarea>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-cancel-global" (click)="closeEditModal()">Cancel</button>
-          <button type="submit" class="btn btn-add-global" [disabled]="holidayForm.invalid">Update Holiday</button>
+          <button type="button" class="custom-btn-2 btn-cancel-2" (click)="closeEditModal()">{{ 'HOLIDAYS_PAGE.CANCEL' | translate }}</button>
+          <button type="submit" class="custom-btn-2 btn-add-global-2" [disabled]="holidayForm.invalid">{{ 'HOLIDAYS_PAGE.UPDATE_HOLIDAY' | translate }}</button>
         </div>
       </form>
     </div>

@@ -1,30 +1,38 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ClassesService } from './classes.service';
 import { ClassModel } from './classes.interface';
-import { TitlePage } from '../../shared/layouts/title-page/title-page';
+import { TitlePage, Breadcrumb, TitleAction } from '../../shared/layouts/title-page/title-page';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { PageTitleService } from '../../core/services/page-title.service';
+import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-classes',
   standalone: true,
-  imports: [CommonModule, RouterModule, TitlePage, ReactiveFormsModule],
+  imports: [CommonModule, RouterModule, TitlePage, ReactiveFormsModule, TranslateModule],
   templateUrl: './classes.component.html',
   styleUrls: ['./classes.component.scss']
 })
-export class ClassesComponent implements OnInit {
+export class ClassesComponent implements OnInit, OnDestroy {
   classes: ClassModel[] = [];
   selectedClass: ClassModel | null = null;
   showDetailModal = false;
   showEditModal = false;
   classForm: FormGroup;
+  breadcrumbs: Breadcrumb[] = [];
+  titleActions: TitleAction[] = [];
+  private langChangeSub?: Subscription;
 
   constructor(
     private classesService: ClassesService,
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private translate: TranslateService,
+    private pageTitleService: PageTitleService
   ) {
     this.classForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -38,7 +46,38 @@ export class ClassesComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.pageTitleService.setTitle(this.translate.instant('CLASSES.TITLE'));
+    this.setupBreadcrumbs();
+    this.setupTitleActions();
     this.loadClasses();
+
+    this.langChangeSub = this.translate.onLangChange.subscribe(() => {
+      this.pageTitleService.setTitle(this.translate.instant('CLASSES.TITLE'));
+      this.setupBreadcrumbs();
+      this.setupTitleActions();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSub?.unsubscribe();
+  }
+
+  private setupBreadcrumbs(): void {
+    this.breadcrumbs = [
+      { label: this.translate.instant('BREADCRUMBS.DASHBOARD'), url: '/dashboard' },
+      { label: this.translate.instant('CLASSES.TITLE') }
+    ];
+  }
+
+  private setupTitleActions(): void {
+    this.titleActions = [
+      {
+        label: this.translate.instant('CLASSES.ADD_CLASS'),
+        class: 'btn-add-global-2',
+        icon: 'bi bi-plus-lg',
+        action: () => this.addClass()
+      }
+    ];
   }
 
   loadClasses() {
